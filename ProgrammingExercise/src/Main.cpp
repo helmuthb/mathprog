@@ -57,6 +57,7 @@ int main( int argc, char *argv[] )
 	}
 	else {
 		cerr << "Sorry, this model '" << model_type << "' is not yet implemented!" << endl;
+		cerr << "You can currently only use 'scf', 'mcf' and 'mtz'." << endl;
 		return 1;
 	}
 	ilp->solve();
