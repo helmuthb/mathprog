@@ -48,6 +48,7 @@ CPP_SOURCES = \
 	src/kMST_SCF.cpp \
 	src/kMST_MCF.cpp \
 	src/kMST_MTZ.cpp \
+	src/kMST_CEC.cpp \
 	src/Tools.cpp \
 	src/CutCallback.cpp \
 	src/Maxflow.cpp \

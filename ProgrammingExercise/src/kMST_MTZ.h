@@ -8,7 +8,7 @@ class kMST_MTZ : public kMST_ILP {
 protected:
   // MTZ variables
 	IloBoolVarArray y; // arc variables
-  IloNumVarArray o; // order variables
+  IloIntVarArray o; // order variables
 
   void createModel();
   void outputVars();

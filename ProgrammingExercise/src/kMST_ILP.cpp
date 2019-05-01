@@ -8,7 +8,7 @@ kMST_ILP::kMST_ILP( Instance& _instance, string _model_type, int _k ) :
 	if( k == 0 ) k = n;
 }
 
-void kMST_ILP::solve()
+void kMST_ILP::solve( bool verbose )
 {
 	// initialize CPLEX solver
 	initCPLEX();
@@ -39,9 +39,11 @@ void kMST_ILP::solve()
 		cout << "CPLEX finished.\n\n";
 		cout << "CPLEX status: " << cplex.getStatus() << "\n";
 		cout << "Branch-and-Bound nodes: " << cplex.getNnodes() << "\n";
-		if (cplex.getStatus() != CPX_STAT_INFEASIBLE) {
+		if ( cplex.getStatus() != CPX_STAT_INFEASIBLE ) {
 			cout << "Objective value: " << cplex.getObjValue() << "\n";
-			// outputVars();
+			if ( verbose ) {
+				outputVars();
+			}
 		}
 		cout << "CPU time: " << Tools::CPUtime() << "\n\n";
 

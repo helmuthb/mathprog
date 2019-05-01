@@ -40,7 +40,7 @@ public:
 
 	kMST_ILP( Instance& _instance, string _model_type, int _k );
 	virtual ~kMST_ILP();
-	void solve();
+	void solve( bool verbose );
 
 };
 
