@@ -20,13 +20,13 @@ void kMST_SCF::createModel()
   //   x ... boolean from {0, 1}
   //   z ... boolean from {0, 1}
   // Constraints:
-  //   (1): f(i,j) <= k * x(i, j)
-  //   (2): f(j,i) <= k * x(j, i)
+  //   (1): f(i,j) <= k * x(i,j)
+  //   (2): f(j,i) <= k * x(i,j)
   //   (3): x(i, j) <= z(i)
   //   (4): x(i, j) <= z(j)
   //   (5): sum over f going from 0 - sum over f going to 0 = k
   //   (6): i not 0, sum over f going from i - sum over f going to i = -1 * z(i)
-  //   (7): sum x(i, j) = k
+  //   (7): sum x(i,j) = k
   //   (8): sum z(j) = k + 1
   //   (9): sum x(0,i) = 1
   // Target function:
@@ -117,6 +117,8 @@ void kMST_SCF::createModel()
     target += instance.edges[i].weight * x[i];
   }
   model.add( IloMinimize( env, target ) );
+  // give it a name for output
+  model.setName("k-MST (MCF)");
 }
 
 void kMST_SCF::outputVars()
