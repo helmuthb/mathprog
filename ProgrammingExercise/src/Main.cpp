@@ -7,6 +7,7 @@
 #include "kMST_ILP.h"
 #include "kMST_SCF.h"
 #include "kMST_MCF.h"
+#include "kMST_MTZ.h"
 
 using namespace std;
 
@@ -51,8 +52,12 @@ int main( int argc, char *argv[] )
 	else if ( model_type == "mcf" ) {
 		ilp = new kMST_MCF( instance, k );
 	}
+	else if ( model_type == "mtz" ) {
+		ilp = new kMST_MTZ( instance, k );
+	}
 	else {
-		ilp = new kMST_SCF( instance, k );
+		cerr << "Sorry, this model '" << model_type << "' is not yet implemented!" << endl;
+		return 1;
 	}
 	ilp->solve();
 	delete ilp;
