@@ -45,6 +45,7 @@ STARTUP_SOURCE = $(SRCDIR)/Main.cpp
 CPP_SOURCES = \
 	src/Instance.cpp \
 	src/kMST_ILP.cpp \
+	src/kMST_SCF.cpp \
 	src/Tools.cpp \
 	src/CutCallback.cpp \
 	src/Maxflow.cpp \

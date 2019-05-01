@@ -5,6 +5,7 @@
 #include "Tools.h"
 #include "Instance.h"
 #include "kMST_ILP.h"
+#include "kMST_SCF.h"
 
 using namespace std;
 
@@ -42,8 +43,15 @@ int main( int argc, char *argv[] )
 	// read instance
 	Instance instance( file );
 	// solve instance
-	kMST_ILP ilp( instance, model_type, k );
-	ilp.solve();
+	kMST_ILP *ilp;
+	if ( model_type == "scf" ) {
+		ilp = new kMST_SCF( instance, k );
+	}
+	else {
+		ilp = new kMST_SCF( instance, k );
+	}
+	ilp->solve();
+	delete ilp;
 
 	return 0;
 } // main

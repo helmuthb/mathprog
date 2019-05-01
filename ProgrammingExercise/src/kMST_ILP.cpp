@@ -13,12 +13,10 @@ void kMST_ILP::solve()
 	// initialize CPLEX solver
 	initCPLEX();
 
-	// ++++++++++++++++++++++++++++++++++++++++++
-	// TODO create variables and build constraints
-	// ++++++++++++++++++++++++++++++++++++++++++
-
 	try {
-		// build model
+		// build model (calling model-specific implementation)
+		createModel();
+
 		cplex = IloCplex( model );
 		cplex.exportModel( "model.lp" );
 
@@ -42,6 +40,7 @@ void kMST_ILP::solve()
 		cout << "CPLEX status: " << cplex.getStatus() << "\n";
 		cout << "Branch-and-Bound nodes: " << cplex.getNnodes() << "\n";
 		cout << "Objective value: " << cplex.getObjValue() << "\n";
+		// outputVars();
 		cout << "CPU time: " << Tools::CPUtime() << "\n\n";
 
 	}
@@ -55,7 +54,7 @@ void kMST_ILP::solve()
 	}
 }
 
-// ----- private methods -----------------------------------------------
+// ----- protected methods -----------------------------------------------
 
 void kMST_ILP::initCPLEX()
 {

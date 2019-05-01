@@ -13,7 +13,7 @@ ILOSTLBEGIN
 class kMST_ILP
 {
 
-private:
+protected:
 
 	Instance& instance;
 	string model_type;
@@ -33,10 +33,13 @@ private:
 
 	void initCPLEX();
 
+	virtual void createModel() = 0;
+	virtual void outputVars() = 0;
+
 public:
 
 	kMST_ILP( Instance& _instance, string _model_type, int _k );
-	~kMST_ILP();
+	virtual ~kMST_ILP();
 	void solve();
 
 };
