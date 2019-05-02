@@ -31,7 +31,7 @@ void kMST_SCF::createModel()
   //   (9): sum x(0,i) = 1
   // Target function:
   //   min( sum of w[i]*x[i] )
-  f = IloIntVarArray( env, 2 * m );
+  f = IloNumVarArray( env, 2 * m );
   x = IloBoolVarArray( env, m );
   z = IloBoolVarArray( env, n );
   for ( int j = 0; j < n; j++ ) {
@@ -44,9 +44,9 @@ void kMST_SCF::createModel()
     // add variables for edges
     char varname[16];
     sprintf( varname, "f(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
-    f[2*i] = IloIntVar( env, varname );
+    f[2*i] = IloNumVar( env, 0, k, varname );
     sprintf( varname, "f(%d,%d)", instance.edges[i].v2, instance.edges[i].v1 );
-    f[2*i+1] = IloIntVar( env, varname );
+    f[2*i+1] = IloNumVar( env, 0, k, varname );
     sprintf( varname, "x(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
     x[i] = IloBoolVar( env, varname );
     // add constraints (1) and (2)

@@ -27,7 +27,7 @@ void kMST_MTZ::createModel()
   //   (2): y(i,j)+y(j,i) = x(i,j)
   //   (3): o(j) >= o(i) + 1 - (1-y(i,j))*k
   //   (4): !!! sum over j y(i,j) <= z(i)
-  //   (5): !!! sum over j y(j,i) <= z(i)
+  //   (5): sum over j y(j,i) <= z(i)
   //   (6): sum x(i,j) = k
   //   (7): sum z(j) = k + 1
   //   (8): sum x(0,i) = 1
@@ -36,15 +36,15 @@ void kMST_MTZ::createModel()
   y = IloBoolVarArray( env, 2 * m );
   x = IloBoolVarArray( env, m );
   z = IloBoolVarArray( env, n );
-  o = IloIntVarArray( env, n );
+  o = IloNumVarArray( env, n );
   for ( int j = 0; j < n; j++ ) {
     // add variables for nodes
     char varname[16];
     sprintf( varname, "z(%d)", j );
     z[j] = IloBoolVar( env, varname );
     sprintf( varname, "o(%d)", j );
-    // o[j] = IloIntVar( env, 0, k, varname );
-    o[j] = IloIntVar( env );
+    o[j] = IloNumVar( env, 0, k, varname );
+    // o[j] = IloIntVar( env, varname );
     // add constraint (1)
     // model.add( o[j] <= k * z[j] );
   }

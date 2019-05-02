@@ -16,7 +16,7 @@ void kMST_MCF::createModel()
   //   f^l(i,j), f^l(j,i) - flow targeted to l from i to j and from j to i, l>0
   //   x(i,j) - edge (i,j) selected
   //   z(i) - node i selected
-  //   f ... boolean from {0, 1}
+  //   f ... float in the range [0, 1]
   //   x ... boolean from {0, 1}
   //   z ... boolean from {0, 1}
   // Constraints:
@@ -33,7 +33,7 @@ void kMST_MCF::createModel()
   //   (12): sum x(0,i) = 1
   // Target function:
   //   min( sum of w[i]*x[i] )
-  f = IloBoolVarArray( env, 2 * m * (n - 1) );
+  f = IloNumVarArray( env, 2 * m * (n - 1) );
   x = IloBoolVarArray( env, m );
   z = IloBoolVarArray( env, n );
   for ( int j = 0; j < n; j++ ) {
@@ -49,9 +49,9 @@ void kMST_MCF::createModel()
     x[i] = IloBoolVar( env, varname );
     for ( int l = 1; l < n; l++ ) {
       sprintf( varname, "f(%d)(%d,%d)", l, instance.edges[i].v1, instance.edges[i].v2 );
-      f[2*(l-1)*m+2*i] = IloBoolVar( env, varname );
+      f[2*(l-1)*m+2*i] = IloNumVar( env, 0, 1, varname );
       sprintf( varname, "f(%d)(%d,%d)", l, instance.edges[i].v2, instance.edges[i].v1 );
-      f[2*(l-1)*m+2*i+1] = IloBoolVar( env, varname );
+      f[2*(l-1)*m+2*i+1] = IloNumVar( env, 0, 1, varname );
       // add constraints (1), (2), (3)
       model.add( f[2*(l-1)*m+2*i] <= x[i] );
       model.add( f[2*(l-1)*m+2*i+1] <= x[i] );
