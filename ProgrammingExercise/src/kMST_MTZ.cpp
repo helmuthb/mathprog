@@ -37,7 +37,7 @@ void kMST_MTZ::createModel()
   x = IloBoolVarArray( env, m );
   z = IloBoolVarArray( env, n );
   o = IloNumVarArray( env, n );
-  for ( int j = 0; j < n; j++ ) {
+  for ( u_int j = 0; j < n; j++ ) {
     // add variables for nodes
     char varname[16];
     sprintf( varname, "z(%d)", j );
@@ -48,7 +48,7 @@ void kMST_MTZ::createModel()
     // add constraint (1)
     // model.add( o[j] <= k * z[j] );
   }
-  for ( int i = 0; i < m; i++ ) {
+  for ( u_int i = 0; i < m; i++ ) {
     // add variables for edges
     char varname[16];
     sprintf( varname, "x(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
@@ -64,10 +64,10 @@ void kMST_MTZ::createModel()
     model.add( o[instance.edges[i].v1] >= o[instance.edges[i].v2] + 1 - (1 - y[2*i+1])*(k+1) );
   }
   // constraints (4) and (5)
-  for ( int i = 0; i < n; i++ ) {
+  for ( u_int i = 0; i < n; i++ ) {
     IloExpr constraint4 ( env );
     IloExpr constraint5 ( env );
-    for ( int j = 0; j < m; j++ ) {
+    for ( u_int j = 0; j < m; j++ ) {
       if ( instance.edges[j].v1 == i ) {
         model.add( x[j] <= z[i] );
         constraint4 += y[2*j];
@@ -86,21 +86,21 @@ void kMST_MTZ::createModel()
   }
   // Constraint 6
   IloExpr constraint6 ( env );
-  for ( int i = 0; i < m; i++ ) {
+  for ( u_int i = 0; i < m; i++ ) {
     constraint6 += x[i];
   }
   model.add( constraint6 == k);
   constraint6.end();
   // Constraint 7
   IloExpr constraint7 ( env );
-  for ( int j = 0; j < n; j++ ) {
+  for ( u_int j = 0; j < n; j++ ) {
     constraint7 += z[j];
   }
   model.add( constraint7 == k+1 );
   constraint7.end();
   // Constraint 8
   IloExpr constraint8 ( env );
-  for ( int i = 0; i < m; i++ ) {
+  for ( u_int i = 0; i < m; i++ ) {
     if ( instance.edges[i].v1 == 0 || instance.edges[i].v2 == 0 ) {
       constraint8 += x[i];
     }
@@ -110,7 +110,7 @@ void kMST_MTZ::createModel()
   model.add( o[0] == 0 );
   // Target function
   IloExpr target ( env );
-  for ( int i = 0; i < m; i ++ ) {
+  for ( u_int i = 0; i < m; i ++ ) {
     target += instance.edges[i].weight * x[i];
   }
   model.add( IloMinimize( env, target ) );
@@ -121,7 +121,7 @@ void kMST_MTZ::createModel()
 void kMST_MTZ::outputVars()
 {
   // Arc variables
-  for ( int i = 0; i < m; i++ ) {
+  for ( u_int i = 0; i < m; i++ ) {
     if ( cplex.getValue( y[2*i] ) ) {
       cout << "Arc " << instance.edges[i].v1 << "->" << instance.edges[i].v2 << endl;
     }
@@ -130,13 +130,13 @@ void kMST_MTZ::outputVars()
     }
   }
   // Node selections
-  for ( int j = 0; j < n; j++ ) {
+  for ( u_int j = 0; j < n; j++ ) {
     if ( cplex.getValue( z[j] ) ) {
       cout << "Node " << j << endl;
     }
   }
   // Order variables
-  for ( int i = 0; i < n; i++ ) {
+  for ( u_int i = 0; i < n; i++ ) {
     int order = cplex.getValue( o[i] );
     if (order > 0) {
       cout << "Order (" << i << ") = " << order << endl;

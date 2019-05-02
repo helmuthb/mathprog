@@ -7,7 +7,7 @@ EXEC = ./kmst -f data/g01.dat -m scf -k 5
 DEBUG = 1
 
 CPLEX_VERSION = 12.9
-ifeq ($(UNAME), Darwin)
+ifeq ($(UNAME), Linux)
 CPLEX_DIR = /share/apps/cplex/12.9
 OSTYPE = linux
 PROFILING = -p
