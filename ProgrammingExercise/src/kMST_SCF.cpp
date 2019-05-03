@@ -24,7 +24,7 @@ void kMST_SCF::createModel()
   //   (2): f(j,i) <= k * x(i,j)
   //   (3): x(i, j) <= z(i)
   //   (4): x(i, j) <= z(j)
-  //   (5): sum over f going from 0 = k
+  //   !! (5): sum over f going from 0 = k
   //        f going to 0 = 0
   //   (6): i not 0, sum over f going from i - sum over f going to i = -1 * z(i)
   //   (7): sum x(i,j) = k
@@ -65,14 +65,16 @@ void kMST_SCF::createModel()
       constraint5 += f[2*i];
       // constraint5 -= f[2*i+1];
       model.add( f[2*i+1] == 0 );
+      model.add( f[2*i] == k * x[i] );
     }
     else if ( instance.edges[i].v2 == 0 ) {
       constraint5 += f[2*i+1];
       // constraint5 -= f[2*i];
       model.add( f[2*i] == 0 );
+      model.add( f[2*i+1] == k * x[i] );
     }
   }
-  model.add( constraint5 == k );
+  // model.add( constraint5 == k );
   constraint5.end();
   // Constraint 6
   // j ... the node we look at currently
