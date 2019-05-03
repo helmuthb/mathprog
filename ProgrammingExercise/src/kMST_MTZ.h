@@ -14,7 +14,7 @@ protected:
   void outputVars();
   
 public:
-  kMST_MTZ( Digraph& _digraph, int _k );
+  kMST_MTZ( Digraph& _digraph, int _k, bool _quiet );
 
 };
 

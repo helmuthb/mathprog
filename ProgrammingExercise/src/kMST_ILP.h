@@ -20,6 +20,8 @@ protected:
 	int k;
 	u_int m, n, a;
 
+	bool quiet;
+
 	IloEnv env;
 	IloModel model;
 	IloCplex cplex;
@@ -38,9 +40,9 @@ protected:
 
 public:
 
-	kMST_ILP( Digraph& _digraph, string _model_type, int _k );
+	kMST_ILP( Digraph& _digraph, string _model_type, int _k, bool _quiet );
 	virtual ~kMST_ILP();
-	void solve( bool verbose, bool quiet );
+	void solve( bool verbose );
 
 };
 

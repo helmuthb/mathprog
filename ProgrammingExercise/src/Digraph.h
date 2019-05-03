@@ -22,7 +22,7 @@ public:
   vector<Arc> arcs;
 
   // constructor
-  Digraph( string file );
+  Digraph( string file, bool quiet = false );
 
 };
 // Digraph

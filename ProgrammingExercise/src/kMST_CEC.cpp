@@ -1,7 +1,7 @@
 #include "kMST_CEC.h"
 
-kMST_CEC::kMST_CEC( Digraph& _digraph, int _k ) :
-  kMST_ILP( _digraph, "cec", _k )
+kMST_CEC::kMST_CEC( Digraph& _digraph, int _k, bool _quiet ) :
+  kMST_ILP( _digraph, "cec", _k, _quiet )
 {
 }
 

@@ -1,7 +1,7 @@
 #include "kMST_MCF.h"
 
-kMST_MCF::kMST_MCF( Digraph& _digraph, int _k ) :
-  kMST_ILP( _digraph, "mcf", _k )
+kMST_MCF::kMST_MCF( Digraph& _digraph, int _k, bool _quiet ) :
+  kMST_ILP( _digraph, "mcf", _k, _quiet )
 {
 }
 

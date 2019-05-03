@@ -1,6 +1,6 @@
 #include "Digraph.h"
 
-Digraph::Digraph( string file ) : Instance( file ),
+Digraph::Digraph( string file, bool quiet ) : Instance( file, quiet ),
   n_arcs( 2*n_edges - n_nodes + 1 ), arcs( n_arcs )
 {
   // add two arc for each edge

@@ -1,7 +1,8 @@
 #include "kMST_ILP.h"
 
-kMST_ILP::kMST_ILP( Digraph& _digraph, string _model_type, int _k ) :
-	digraph( _digraph ), model_type( _model_type ), k( _k ), epInt( 0.0 ), epOpt( 0.0 )
+kMST_ILP::kMST_ILP( Digraph& _digraph, string _model_type, int _k, bool _quiet ) :
+	digraph( _digraph ), model_type( _model_type ), k( _k ),
+	epInt( 0.0 ), epOpt( 0.0 ), quiet( _quiet )
 {
 	n = digraph.n_nodes;
 	m = digraph.n_edges;
@@ -9,7 +10,7 @@ kMST_ILP::kMST_ILP( Digraph& _digraph, string _model_type, int _k ) :
 	if( k == 0 ) k = n;
 }
 
-void kMST_ILP::solve( bool verbose, bool quiet )
+void kMST_ILP::solve( bool verbose )
 {
 	// initialize CPLEX solver
 	initCPLEX();
@@ -40,18 +41,34 @@ void kMST_ILP::solve( bool verbose, bool quiet )
 		}
 
 		// solve model
-		cout << "Calling CPLEX solve ...\n";
+		if ( !quiet ) {
+			cout << "Calling CPLEX solve ...\n";
+		}
 		cplex.solve();
-		cout << "CPLEX finished.\n\n";
-		cout << "CPLEX status: " << cplex.getStatus() << "\n";
-		cout << "Branch-and-Bound nodes: " << cplex.getNnodes() << "\n";
-		if ( cplex.getStatus() != CPX_STAT_INFEASIBLE ) {
-			cout << "Objective value: " << cplex.getObjValue() << "\n";
-			if ( verbose ) {
-				outputVars();
+		if ( !quiet ) {
+			cout << "CPLEX finished.\n\n";
+			cout << "CPLEX status: " << cplex.getStatus() << "\n";
+			cout << "Branch-and-Bound nodes: " << cplex.getNnodes() << "\n";
+			if ( cplex.getStatus() != CPX_STAT_INFEASIBLE ) {
+				cout << "Objective value: " << cplex.getObjValue() << "\n";
+				if ( verbose ) {
+					outputVars();
+				}
 			}
 		}
-		cout << "CPU time: " << Tools::CPUtime() << "\n\n";
+		double cpuTime = Tools::CPUtime();
+		if ( !quiet ) {
+			cout << "CPU time: " << cpuTime << "\n\n";
+		}
+		else {
+			cerr << cpuTime << "," << cplex.getNnodes() << ",";
+			if ( cplex.getStatus() != CPX_STAT_INFEASIBLE ) {
+				cerr << cplex.getObjValue() << endl;
+			}
+			else {
+				cerr << -1 << endl;
+			}
+		}
 
 	}
 	catch( IloException& e ) {
@@ -68,9 +85,14 @@ void kMST_ILP::solve( bool verbose, bool quiet )
 
 void kMST_ILP::initCPLEX()
 {
-	cout << "initialize CPLEX ... ";
+	if ( !quiet ) {
+		cout << "initialize CPLEX ... ";
+	}
 	try {
 		env = IloEnv();
+		if ( quiet ) {
+			env.setOut( env.getNullStream() );
+		}
 		model = IloModel( env );
 		values = IloNumArray( env );
 	}
@@ -80,7 +102,9 @@ void kMST_ILP::initCPLEX()
 	catch( ... ) {
 		cerr << "kMST_ILP: unknown exception.\n";
 	}
-	cout << "done.\n";
+	if ( !quiet ) {
+		cout << "done.\n";
+	}
 }
 
 kMST_ILP::~kMST_ILP()

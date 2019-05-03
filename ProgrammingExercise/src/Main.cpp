@@ -52,27 +52,27 @@ int main( int argc, char *argv[] )
 		}
 	}
 	// read instance
-	Digraph instance( file );
+	Digraph instance( file, quiet );
 	// solve instance
 	kMST_ILP *ilp;
 	if ( model_type == "scf" ) {
-		ilp = new kMST_SCF( instance, k );
+		ilp = new kMST_SCF( instance, k, quiet );
 	}
 	else if ( model_type == "mcf" ) {
-		ilp = new kMST_MCF( instance, k );
+		ilp = new kMST_MCF( instance, k, quiet );
 	}
 	else if ( model_type == "mtz" ) {
-		ilp = new kMST_MTZ( instance, k );
+		ilp = new kMST_MTZ( instance, k, quiet );
 	}
 	else if ( model_type == "cec" ) {
-		ilp = new kMST_CEC( instance, k );
+		ilp = new kMST_CEC( instance, k, quiet );
 	}
 	else {
 		cerr << "Sorry, this model '" << model_type << "' is not yet implemented!" << endl;
 		cerr << "You can currently only use 'scf', 'mcf', 'mtz' and 'cec'." << endl;
 		return 1;
 	}
-	ilp->solve( verbose, quiet );
+	ilp->solve( verbose );
 	delete ilp;
 
 	return 0;

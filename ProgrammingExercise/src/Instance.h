@@ -29,7 +29,7 @@ public:
 	vector<list<u_int> > incidentEdges;
 
 	// constructor
-	Instance( string file );
+	Instance( string file, bool quiet = false );
 
 };
 // Instance

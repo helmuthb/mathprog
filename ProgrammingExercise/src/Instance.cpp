@@ -1,6 +1,6 @@
 #include "Instance.h"
 
-Instance::Instance( string file ) :
+Instance::Instance( string file, bool quiet ) :
 	n_nodes( 0 ), n_edges( 0 )
 {
 	ifstream ifs( file.c_str() );
@@ -9,11 +9,15 @@ Instance::Instance( string file ) :
 		exit( -1 );
 	}
 
-	cout << "Reading instance from file " << file << "\n";
+	if ( !quiet ) {
+		cout << "Reading instance from file " << file << "\n";
+	}
 
 	ifs >> n_nodes >> n_edges;
-	cout << "Number of nodes: " << n_nodes << "\n";
-	cout << "Number of edges: " << n_edges << "\n";
+	if ( !quiet ) {
+		cout << "Number of nodes: " << n_nodes << "\n";
+		cout << "Number of edges: " << n_edges << "\n";
+	}
 
 	edges.resize( n_edges );
 	incidentEdges.resize( n_nodes );

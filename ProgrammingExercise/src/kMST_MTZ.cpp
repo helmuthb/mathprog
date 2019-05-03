@@ -1,7 +1,7 @@
 #include "kMST_MTZ.h"
 
-kMST_MTZ::kMST_MTZ( Digraph& _digraph, int _k ) :
-  kMST_ILP( _digraph, "mtz", _k )
+kMST_MTZ::kMST_MTZ( Digraph& _digraph, int _k, bool _quiet ) :
+  kMST_ILP( _digraph, "mtz", _k, _quiet )
 {
 }
 
