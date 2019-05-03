@@ -15,17 +15,14 @@ void kMST_MCF::createModel()
   // Variables:
   //   f^l(i,j), f^l(j,i) - flow targeted to l from i to j and from j to i, l>0
   //   x(i,j) - edge (i,j) selected
-  //   y(i,j) - arc (i,j) selected
   //   z(i) - node i selected
   //   f ... float in the range [0, 1]
   //   x ... boolean from {0, 1}
-  //   y ... boolean from {0, 1}
   //   z ... boolean from {0, 1}
   // Constraints:
-  //   (1): f^l(i,j) <= y(i,j), l != 0
-  //   (2): f^l(j,i) <= y(i,j), l != 0
+  //   (1): f^l(i,j) <= x(i,j), l != 0
+  //   (2): f^l(j,i) <= x(i,j), l != 0
   //   (3): f^l(i,j) <= z(l), l != 0
-  //        y(i,j) + y(j,i) = x(i,j)
   //   (5): x(i,j) <= z(i)
   //   (6): x(i,j) <= z(j)
   //   (7): sum over f^l going from 0 = 1 * z(l), l != 0
@@ -34,13 +31,11 @@ void kMST_MCF::createModel()
   //   (9): sum over f^l going from j - sum over f^l going to j = 0 (for j != l, j != 0, l != 0)
   //   (10): sum x(i,j) = k
   //   (11): sum z(j) = k + 1
-  //   (12): sum y(0,i) = 1
-  //             y(i,0) = 0
+  //   (12): sum x(0,i) = 1
   // Target function:
   //   min( sum of w[i]*x[i] )
-  IloNumVarArray f = IloNumVarArray( env, 2 * m * (n - 1) );
+  f = IloNumVarArray( env, 2 * m * (n - 1) );
   x = IloBoolVarArray( env, m );
-  y = IloNumVarArray( env, 2*m );
   z = IloBoolVarArray( env, n );
   for ( u_int j = 0; j < n; j++ ) {
     // add variables for nodes
@@ -50,25 +45,20 @@ void kMST_MCF::createModel()
   }
   for ( u_int i = 0; i < m; i++ ) {
     // add variables for edges
-    char varname[32];
+    char varname[16];
     sprintf( varname, "x(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
     x[i] = IloBoolVar( env, varname );
-    sprintf( varname, "y(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
-    y[2*i] = IloNumVar( env, 0, 1, varname );
-    sprintf( varname, "y(%d,%d)", instance.edges[i].v2, instance.edges[i].v1 );
-    y[2*i+1] = IloNumVar( env, 0, 1, varname );
     for ( u_int l = 1; l < n; l++ ) {
       sprintf( varname, "f(%d)(%d,%d)", l, instance.edges[i].v1, instance.edges[i].v2 );
       f[2*(l-1)*m+2*i] = IloNumVar( env, 0, 1, varname );
       sprintf( varname, "f(%d)(%d,%d)", l, instance.edges[i].v2, instance.edges[i].v1 );
       f[2*(l-1)*m+2*i+1] = IloNumVar( env, 0, 1, varname );
       // add constraints (1), (2), (3)
-      model.add( f[2*(l-1)*m+2*i] <= y[2*i] );
-      model.add( f[2*(l-1)*m+2*i+1] <= y[2*i+1] );
+      model.add( f[2*(l-1)*m+2*i] <= x[i] );
+      model.add( f[2*(l-1)*m+2*i+1] <= x[i] );
       model.add( f[2*(l-1)*m+2*i] <= z[l] );
       model.add( f[2*(l-1)*m+2*i+1] <= z[l] );
     }
-    model.add( y[2*i] + y[2*i+1] == x[i] );
     // add constraints (5) and (6)
     model.add( x[i] <= z[instance.edges[i].v1] );
     model.add( x[i] <= z[instance.edges[i].v2] );
@@ -147,11 +137,8 @@ void kMST_MCF::createModel()
   // Constraint 12
   IloExpr constraint12 ( env );
   for ( u_int i = 0; i < m; i++ ) {
-    if ( instance.edges[i].v1 == 0) {
-      constraint12 += y[2*i];
-    }
-    else if ( instance.edges[i].v2 == 0 ) {
-      constraint12 += y[2*i+1];
+    if ( instance.edges[i].v1 == 0 || instance.edges[i].v2 == 0 ) {
+      constraint12 += x[i];
     }
   }
   model.add( constraint12 == 1 );
@@ -170,19 +157,8 @@ void kMST_MCF::outputVars()
 {
   // Edge variables
   for ( u_int i = 0; i < m; i++ ) {
-    double yval = cplex.getValue( y[2*i] );
-    if ( yval ) {
-      cout << "Arc " << instance.edges[i].v1 << "->"
-           << instance.edges[i].v2 << "("
-           << yval << ")"
-           << endl;
-    }
-    yval = cplex.getValue( y[2*i+1] );
-    if ( yval ) {
-      cout << "Arc " << instance.edges[i].v2 << "->"
-           << instance.edges[i].v1 << "("
-           << yval << ")"
-           << endl;
+    if ( cplex.getValue( x[i] ) ) {
+      cout << "Edge " << instance.edges[i].v1 << "->" << instance.edges[i].v2 << endl;
     }
   }
   // Node selections
@@ -194,14 +170,12 @@ void kMST_MCF::outputVars()
   // Flow variables
   for ( u_int i = 0; i < m; i++ ) {
     for ( u_int j = 1; j < n; j++ ) {
-      // double flow = cplex.getValue( f[2*m*(j-1)+2*i] );
-      double flow = 0;
+      int flow = cplex.getValue( f[2*m*(j-1)+2*i] );
       if (flow > 0) {
         cout << "Flow (" << j << ") " << instance.edges[i].v1 << "->" << instance.edges[i].v2;
         cout << "=" << flow << endl;
       }
-      // flow = cplex.getValue( f[2*m*(j-1)+2*i+1] );
-      flow = 0;
+      flow = cplex.getValue( f[2*m*(j-1)+2*i+1] );
       if (flow > 0) {
         cout << "Flow (" << j << ") " << instance.edges[i].v2 << "->" << instance.edges[i].v1;
         cout << "=" << flow << endl;
@@ -210,4 +184,3 @@ void kMST_MCF::outputVars()
   }
 
 }
-

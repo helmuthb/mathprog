@@ -150,4 +150,3 @@ void kMST_SCF::outputVars()
   }
 
 }
-

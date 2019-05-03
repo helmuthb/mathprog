@@ -7,14 +7,14 @@ class kMST_MCF : public kMST_ILP {
 
 protected:
   // MCF variables
-  IloNumVarArray y; // arc variables
-  // IloNumVarArray f; // flow variables
+  IloNumVarArray f; // flow variables
 
   void createModel();
   void outputVars();
   
 public:
   kMST_MCF( Instance& _instance, int _k );
+
 };
 
 #endif
