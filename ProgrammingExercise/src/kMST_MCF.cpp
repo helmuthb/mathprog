@@ -38,7 +38,7 @@ void kMST_MCF::createModel()
   //             y(i,0) = 0
   // Target function:
   //   min( sum of w[i]*x[i] )
-  f = IloNumVarArray( env, 2 * m * (n - 1) );
+  IloNumVarArray f = IloNumVarArray( env, 2 * m * (n - 1) );
   x = IloBoolVarArray( env, m );
   y = IloNumVarArray( env, 2*m );
   z = IloBoolVarArray( env, n );
@@ -194,12 +194,14 @@ void kMST_MCF::outputVars()
   // Flow variables
   for ( u_int i = 0; i < m; i++ ) {
     for ( u_int j = 1; j < n; j++ ) {
-      double flow = cplex.getValue( f[2*m*(j-1)+2*i] );
+      // double flow = cplex.getValue( f[2*m*(j-1)+2*i] );
+      double flow = 0;
       if (flow > 0) {
         cout << "Flow (" << j << ") " << instance.edges[i].v1 << "->" << instance.edges[i].v2;
         cout << "=" << flow << endl;
       }
-      flow = cplex.getValue( f[2*m*(j-1)+2*i+1] );
+      // flow = cplex.getValue( f[2*m*(j-1)+2*i+1] );
+      flow = 0;
       if (flow > 0) {
         cout << "Flow (" << j << ") " << instance.edges[i].v2 << "->" << instance.edges[i].v1;
         cout << "=" << flow << endl;
