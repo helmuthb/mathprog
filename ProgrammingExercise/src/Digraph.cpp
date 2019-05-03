@@ -1,12 +1,16 @@
 #include "Digraph.h"
 
 Digraph::Digraph( string file ) : Instance( file ),
-  n_arcs( 2*n_edges - n_nodes ), arcs( n_arcs )
+  n_arcs( 2*n_edges - n_nodes + 1 ), arcs( n_arcs )
 {
   // add two arc for each edge
   // except for the root node: only from it, not to it
   u_int j = 0;
-  for ( u_int i = 0; i < n_nodes; i++ ) {
+  for ( u_int i = 0; i < n_edges; i++ ) {
+    if ( edges[i].v1 == 0 && edges[i].v2 == 0 ) {
+      // do nothing ...
+      continue;
+    }
     if ( edges[i].v1 == 0 ) {
       // add only arc from root node
       arcs[j].v1 = 0;
@@ -39,5 +43,8 @@ Digraph::Digraph( string file ) : Instance( file ),
       arcs[j].weight = edges[i].weight;
       j++;
     }
+  }
+  if (j < n_arcs) {
+    cerr << "Expected " << n_arcs << " but only got " << j << " arcs" << endl;
   }
 }
