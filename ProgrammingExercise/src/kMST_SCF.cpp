@@ -16,16 +16,16 @@ void kMST_SCF::createModel()
   //   f(i,j), f(j,i) - flow from i to j and from j to i
   //   x(i,j) - edge (i,j) selected
   //   z(i) - node i selected
-  //   f ... integer >= 0
+  //   f ... float >= 0
   //   x ... boolean from {0, 1}
   //   z ... boolean from {0, 1}
   // Constraints:
-  //   (1): f(i,j) <= k * x(i,j)
-  //   (2): f(j,i) <= k * x(i,j)
+  //   (1): f(i,j) <= k * x(i,j), i, j != 0
+  //   (2): f(j,i) <= k * x(i,j), i, j != 0
   //   (3): x(i, j) <= z(i)
   //   (4): x(i, j) <= z(j)
-  //   !! (5): sum over f going from 0 = k
-  //        f going to 0 = 0
+  //   (5): f going to 0 = 0
+  //        f going from 0 to i = k * x(0,i)
   //   (6): i not 0, sum over f going from i - sum over f going to i = -1 * z(i)
   //   (7): sum x(i,j) = k
   //   (8): sum z(j) = k + 1
@@ -51,43 +51,42 @@ void kMST_SCF::createModel()
     sprintf( varname, "x(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
     x[i] = IloBoolVar( env, varname );
     // add constraints (1) and (2)
-    model.add( f[2*i] <= k*x[i] );
-    model.add( f[2*i+1] <= k*x[i] );
+    if ( instance.edges[i].v1 != 0 && instance.edges[i].v2 != 0 ) {
+      model.add( f[2*i] <= k*x[i] );
+      model.add( f[2*i+1] <= k*x[i] );
+    }
     // add constraints (3) and (4)
     model.add( x[i] <= z[instance.edges[i].v1] );
     model.add( x[i] <= z[instance.edges[i].v2] );
   }
   // Constraint 5
-  IloExpr constraint5( env );
   for ( u_int i = 0; i < m; i++ ) {
     // we look for edges involving 0
     if ( instance.edges[i].v1 == 0 ) {
-      constraint5 += f[2*i];
-      // constraint5 -= f[2*i+1];
       model.add( f[2*i+1] == 0 );
       model.add( f[2*i] == k * x[i] );
     }
     else if ( instance.edges[i].v2 == 0 ) {
-      constraint5 += f[2*i+1];
-      // constraint5 -= f[2*i];
       model.add( f[2*i] == 0 );
       model.add( f[2*i+1] == k * x[i] );
     }
   }
-  // model.add( constraint5 == k );
-  constraint5.end();
   // Constraint 6
   // j ... the node we look at currently
   for ( u_int j = 1; j < n; j++ ) {
     IloExpr constraint6( env );
     for ( u_int i = 0; i < m; i++ ) {
       if ( instance.edges[i].v1 == j ) {
-        constraint6 += f[2*i];
         constraint6 -= f[2*i+1];
+        if ( instance.edges[i].v2 != 0 ) {
+          constraint6 += f[2*i];
+        }
       }
       else if ( instance.edges[i].v2 == j ) {
-        constraint6 += f[2*i+1];
         constraint6 -= f[2*i];
+        if ( instance.edges[i].v1 != 0 ) {
+          constraint6 += f[2*i+1];
+        }
       }
     }
     model.add( constraint6 == -1*z[j] );
