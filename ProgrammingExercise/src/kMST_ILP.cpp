@@ -61,12 +61,12 @@ void kMST_ILP::solve( bool verbose )
 			cout << "CPU time: " << cpuTime << "\n\n";
 		}
 		else {
-			cerr << cpuTime << "," << cplex.getNnodes() << ",";
+			cout << cpuTime << "," << cplex.getNnodes() << ",";
 			if ( cplex.getStatus() != CPX_STAT_INFEASIBLE ) {
-				cerr << cplex.getObjValue() << endl;
+				cout << cplex.getObjValue() << endl;
 			}
 			else {
-				cerr << -1 << endl;
+				cout << -1 << endl;
 			}
 		}
 
