@@ -11,6 +11,8 @@ Digraph::Digraph( string file ) : Instance( file ),
       // add only arc from root node
       arcs[j].v1 = 0;
       arcs[j].v2 = edges[i].v2;
+      arcs[j].e = i;
+      arcs[j].o = -1;
       arcs[j].weight = edges[i].weight;
       j++;
     }
@@ -18,16 +20,22 @@ Digraph::Digraph( string file ) : Instance( file ),
       // add only arc from root node
       arcs[j].v1 = 0;
       arcs[j].v2 = edges[i].v1;
+      arcs[j].e = i;
+      arcs[j].o = -1;
       arcs[j].weight = edges[i].weight;
       j++;
     }
     else {
       arcs[j].v1 = edges[i].v1;
       arcs[j].v2 = edges[i].v2;
+      arcs[j].e = i;
+      arcs[j].o = j+1;
       arcs[j].weight = edges[i].weight;
       j++;
       arcs[j].v1 = edges[i].v2;
       arcs[j].v2 = edges[i].v1;
+      arcs[j].e = i;
+      arcs[j].o = j-1;
       arcs[j].weight = edges[i].weight;
       j++;
     }

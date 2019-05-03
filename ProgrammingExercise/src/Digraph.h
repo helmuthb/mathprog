@@ -11,6 +11,8 @@ public:
   struct Arc
   {
     u_int v1, v2;
+    u_int e;
+    u_int o;
     int weight;
   };
 
