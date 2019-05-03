@@ -14,7 +14,7 @@ using namespace std;
 
 void usage()
 {
-	cout << "USAGE:\t<program> -f filename -m model [-v] [-k <nodes to connect>]\n";
+	cout << "USAGE:\t<program> -f filename -m model [-q][-v] [-k <nodes to connect>]\n";
 	cout << "EXAMPLE:\t" << "./kmst -f data/g01.dat -m dcc -k 5\n\n";
 	exit( 1 );
 } // usage
@@ -27,8 +27,9 @@ int main( int argc, char *argv[] )
 	string file( "data/g01.dat" );
 	string model_type( "dcc" );
 	bool verbose( 0 );
+	bool quiet( 0 );
 	int k = 5;
-	while( (opt = getopt( argc, argv, "f:m:k:v" )) != EOF) {
+	while( (opt = getopt( argc, argv, "f:m:k:vq" )) != EOF) {
 		switch( opt ) {
 			case 'f': // instance file
 				file = optarg;
@@ -41,6 +42,9 @@ int main( int argc, char *argv[] )
 				break;
 			case 'v': // verbose
 				verbose = 1;
+				break;
+			case 'q': // quiet
+				quiet = 1;
 				break;
 			default:
 				usage();
@@ -68,7 +72,7 @@ int main( int argc, char *argv[] )
 		cerr << "You can currently only use 'scf', 'mcf', 'mtz' and 'cec'." << endl;
 		return 1;
 	}
-	ilp->solve( verbose );
+	ilp->solve( verbose, quiet );
 	delete ilp;
 
 	return 0;

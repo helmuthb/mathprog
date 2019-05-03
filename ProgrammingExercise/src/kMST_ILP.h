@@ -40,7 +40,7 @@ public:
 
 	kMST_ILP( Digraph& _digraph, string _model_type, int _k );
 	virtual ~kMST_ILP();
-	void solve( bool verbose );
+	void solve( bool verbose, bool quiet );
 
 };
 

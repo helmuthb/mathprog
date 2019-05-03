@@ -9,7 +9,7 @@ kMST_ILP::kMST_ILP( Digraph& _digraph, string _model_type, int _k ) :
 	if( k == 0 ) k = n;
 }
 
-void kMST_ILP::solve( bool verbose )
+void kMST_ILP::solve( bool verbose, bool quiet )
 {
 	// initialize CPLEX solver
 	initCPLEX();
@@ -19,6 +19,9 @@ void kMST_ILP::solve( bool verbose )
 		createModel();
 
 		cplex = IloCplex( model );
+		if ( quiet ) {
+			cplex.setOut( env.getNullStream() );
+		}
 		cplex.exportModel( "model.lp" );
 
 		// set parameters
