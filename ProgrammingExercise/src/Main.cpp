@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include "Tools.h"
-#include "Instance.h"
+#include "Digraph.h"
 #include "kMST_ILP.h"
 #include "kMST_SCF.h"
 #include "kMST_MCF.h"
@@ -48,7 +48,7 @@ int main( int argc, char *argv[] )
 		}
 	}
 	// read instance
-	Instance instance( file );
+	Digraph instance( file );
 	// solve instance
 	kMST_ILP *ilp;
 	if ( model_type == "scf" ) {

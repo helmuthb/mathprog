@@ -44,6 +44,7 @@ STARTUP_SOURCE = $(SRCDIR)/Main.cpp
 
 CPP_SOURCES = \
 	src/Instance.cpp \
+	src/Digraph.cpp \
 	src/kMST_ILP.cpp \
 	src/kMST_SCF.cpp \
 	src/kMST_MCF.cpp \
