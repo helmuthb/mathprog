@@ -1,10 +1,11 @@
 #include "kMST_ILP.h"
 
-kMST_ILP::kMST_ILP( Instance& _instance, string _model_type, int _k ) :
-	instance( _instance ), model_type( _model_type ), k( _k ), epInt( 0.0 ), epOpt( 0.0 )
+kMST_ILP::kMST_ILP( Digraph& _digraph, string _model_type, int _k ) :
+	digraph( _digraph ), model_type( _model_type ), k( _k ), epInt( 0.0 ), epOpt( 0.0 )
 {
-	n = instance.n_nodes;
-	m = instance.n_edges;
+	n = digraph.n_nodes;
+	m = digraph.n_edges;
+	a = digraph.n_arcs;
 	if( k == 0 ) k = n;
 }
 
@@ -29,8 +30,8 @@ void kMST_ILP::solve( bool verbose )
 		// set cut- and lazy-constraint-callback for
 		// cycle-elimination cuts ("cec") or directed connection cuts ("dcc")
 		if (model_type == "cec" || model_type == "dcc") {
-			CutCallback* usercb = new CutCallback( env, model_type, epOpt, instance, x, z );
-			CutCallback* lazycb = new CutCallback( env, model_type, epOpt, instance, x, z );
+			CutCallback* usercb = new CutCallback( env, model_type, epOpt, digraph, x, z );
+			CutCallback* lazycb = new CutCallback( env, model_type, epOpt, digraph, x, z );
 			cplex.use( (UserCutI*) usercb );
 			cplex.use( (LazyConsI*) lazycb );
 		}

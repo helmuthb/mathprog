@@ -1,7 +1,7 @@
 #include "kMST_SCF.h"
 
-kMST_SCF::kMST_SCF( Instance& _instance, int _k ) :
-  kMST_ILP( _instance, "scf", _k )
+kMST_SCF::kMST_SCF( Digraph& _digraph, int _k ) :
+  kMST_ILP( _digraph, "scf", _k )
 {
 }
 
@@ -44,29 +44,29 @@ void kMST_SCF::createModel()
   for ( u_int i = 0; i < m; i++ ) {
     // add variables for edges
     char varname[16];
-    sprintf( varname, "f(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
+    sprintf( varname, "f(%d,%d)", digraph.edges[i].v1, digraph.edges[i].v2 );
     f[2*i] = IloNumVar( env, 0, k, varname );
-    sprintf( varname, "f(%d,%d)", instance.edges[i].v2, instance.edges[i].v1 );
+    sprintf( varname, "f(%d,%d)", digraph.edges[i].v2, digraph.edges[i].v1 );
     f[2*i+1] = IloNumVar( env, 0, k, varname );
-    sprintf( varname, "x(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
+    sprintf( varname, "x(%d,%d)", digraph.edges[i].v1, digraph.edges[i].v2 );
     x[i] = IloBoolVar( env, varname );
     // add constraints (1) and (2)
-    if ( instance.edges[i].v1 != 0 && instance.edges[i].v2 != 0 ) {
+    if ( digraph.edges[i].v1 != 0 && digraph.edges[i].v2 != 0 ) {
       model.add( f[2*i] <= k*x[i] );
       model.add( f[2*i+1] <= k*x[i] );
     }
     // add constraints (3) and (4)
-    model.add( x[i] <= z[instance.edges[i].v1] );
-    model.add( x[i] <= z[instance.edges[i].v2] );
+    model.add( x[i] <= z[digraph.edges[i].v1] );
+    model.add( x[i] <= z[digraph.edges[i].v2] );
   }
   // Constraint 5
   for ( u_int i = 0; i < m; i++ ) {
     // we look for edges involving 0
-    if ( instance.edges[i].v1 == 0 ) {
+    if ( digraph.edges[i].v1 == 0 ) {
       model.add( f[2*i+1] == 0 );
       model.add( f[2*i] == k * x[i] );
     }
-    else if ( instance.edges[i].v2 == 0 ) {
+    else if ( digraph.edges[i].v2 == 0 ) {
       model.add( f[2*i] == 0 );
       model.add( f[2*i+1] == k * x[i] );
     }
@@ -76,15 +76,15 @@ void kMST_SCF::createModel()
   for ( u_int j = 1; j < n; j++ ) {
     IloExpr constraint6( env );
     for ( u_int i = 0; i < m; i++ ) {
-      if ( instance.edges[i].v1 == j ) {
+      if ( digraph.edges[i].v1 == j ) {
         constraint6 -= f[2*i+1];
-        if ( instance.edges[i].v2 != 0 ) {
+        if ( digraph.edges[i].v2 != 0 ) {
           constraint6 += f[2*i];
         }
       }
-      else if ( instance.edges[i].v2 == j ) {
+      else if ( digraph.edges[i].v2 == j ) {
         constraint6 -= f[2*i];
-        if ( instance.edges[i].v1 != 0 ) {
+        if ( digraph.edges[i].v1 != 0 ) {
           constraint6 += f[2*i+1];
         }
       }
@@ -109,7 +109,7 @@ void kMST_SCF::createModel()
   // Constraint 9
   IloExpr constraint9 ( env );
   for ( u_int i = 0; i < m; i++ ) {
-    if ( instance.edges[i].v1 == 0 || instance.edges[i].v2 == 0 ) {
+    if ( digraph.edges[i].v1 == 0 || digraph.edges[i].v2 == 0 ) {
       constraint9 += x[i];
     }
   }
@@ -118,7 +118,7 @@ void kMST_SCF::createModel()
   // Target function
   IloExpr target ( env );
   for ( u_int i = 0; i < m; i ++ ) {
-    target += instance.edges[i].weight * x[i];
+    target += digraph.edges[i].weight * x[i];
   }
   model.add( IloMinimize( env, target ) );
   // give it a name for output
@@ -130,7 +130,7 @@ void kMST_SCF::outputVars()
   // Edge variables
   for ( u_int i = 0; i < m; i++ ) {
     if ( cplex.getValue( x[i] ) ) {
-      cout << "Edge " << instance.edges[i].v1 << "->" << instance.edges[i].v2 << endl;
+      cout << "Edge " << digraph.edges[i].v1 << "->" << digraph.edges[i].v2 << endl;
     }
   }
   // Node selections
@@ -142,10 +142,10 @@ void kMST_SCF::outputVars()
   // Flow variables
   for ( u_int i = 0; i < 0; i++ ) {
     int flow = cplex.getValue( f[2*i] );
-    cout << "Flow " << instance.edges[i].v1 << "->" << instance.edges[i].v2;
+    cout << "Flow " << digraph.edges[i].v1 << "->" << digraph.edges[i].v2;
     cout << "=" << flow << endl;
     flow = cplex.getValue( f[2*i+1] );
-    cout << "Flow " << instance.edges[i].v2 << "->" << instance.edges[i].v1;
+    cout << "Flow " << digraph.edges[i].v2 << "->" << digraph.edges[i].v1;
     cout << "=" << flow << endl;
   }
 

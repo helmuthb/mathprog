@@ -1,7 +1,7 @@
 #include "kMST_MCF.h"
 
-kMST_MCF::kMST_MCF( Instance& _instance, int _k ) :
-  kMST_ILP( _instance, "scf", _k )
+kMST_MCF::kMST_MCF( Digraph& _digraph, int _k ) :
+  kMST_ILP( _digraph, "scf", _k )
 {
 }
 
@@ -46,12 +46,12 @@ void kMST_MCF::createModel()
   for ( u_int i = 0; i < m; i++ ) {
     // add variables for edges
     char varname[16];
-    sprintf( varname, "x(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
+    sprintf( varname, "x(%d,%d)", digraph.edges[i].v1, digraph.edges[i].v2 );
     x[i] = IloBoolVar( env, varname );
     for ( u_int l = 1; l < n; l++ ) {
-      sprintf( varname, "f(%d)(%d,%d)", l, instance.edges[i].v1, instance.edges[i].v2 );
+      sprintf( varname, "f(%d)(%d,%d)", l, digraph.edges[i].v1, digraph.edges[i].v2 );
       f[2*(l-1)*m+2*i] = IloNumVar( env, 0, 1, varname );
-      sprintf( varname, "f(%d)(%d,%d)", l, instance.edges[i].v2, instance.edges[i].v1 );
+      sprintf( varname, "f(%d)(%d,%d)", l, digraph.edges[i].v2, digraph.edges[i].v1 );
       f[2*(l-1)*m+2*i+1] = IloNumVar( env, 0, 1, varname );
       // add constraints (1), (2), (3)
       model.add( f[2*(l-1)*m+2*i] <= x[i] );
@@ -60,20 +60,20 @@ void kMST_MCF::createModel()
       model.add( f[2*(l-1)*m+2*i+1] <= z[l] );
     }
     // add constraints (5) and (6)
-    model.add( x[i] <= z[instance.edges[i].v1] );
-    model.add( x[i] <= z[instance.edges[i].v2] );
+    model.add( x[i] <= z[digraph.edges[i].v1] );
+    model.add( x[i] <= z[digraph.edges[i].v2] );
   }
   // Constraint 7
   for ( u_int l = 1; l < n; l++ ) {
     IloExpr constraint7( env );
     for ( u_int i = 0; i < m; i++ ) {
       // we look for edges involving 0
-      if ( instance.edges[i].v1 == 0 ) {
+      if ( digraph.edges[i].v1 == 0 ) {
         constraint7 += f[2*(l-1)*m+2*i];
         // constraint7 -= f[2*(l-1)*m+2*i+1];
         model.add( f[2*(l-1)*m+2*i+1] == 0 );
       }
-      else if ( instance.edges[i].v2 == 0 ) {
+      else if ( digraph.edges[i].v2 == 0 ) {
         constraint7 += f[2*(l-1)*m+2*i+1];
         // constraint7 -= f[2*(l-1)*m+2*i];
         model.add( f[2*(l-1)*m+2*i] == 0 );
@@ -86,11 +86,11 @@ void kMST_MCF::createModel()
   for ( u_int l = 1; l < n; l++ ) {
     IloExpr constraint8( env );
     for ( u_int i = 0; i < m; i++ ) {
-      if ( instance.edges[i].v1 == l ) {
+      if ( digraph.edges[i].v1 == l ) {
         constraint8 += f[2*(l-1)*m+2*i];
         constraint8 -= f[2*(l-1)*m+2*i+1];
       }
-      else if ( instance.edges[i].v2 == l ) {
+      else if ( digraph.edges[i].v2 == l ) {
         constraint8 += f[2*(l-1)*m+2*i+1];
         constraint8 -= f[2*(l-1)*m+2*i];
       }
@@ -106,11 +106,11 @@ void kMST_MCF::createModel()
       if ( j != l ) {
         IloExpr constraint9( env );
         for ( u_int i = 0; i < m; i++ ) {
-          if ( instance.edges[i].v1 == j ) {
+          if ( digraph.edges[i].v1 == j ) {
             constraint9 += f[2*(l-1)*m+2*i];
             constraint9 -= f[2*(l-1)*m+2*i+1];
           }
-          else if ( instance.edges[i].v2 == j ) {
+          else if ( digraph.edges[i].v2 == j ) {
             constraint9 += f[2*(l-1)*m+2*i+1];
             constraint9 -= f[2*(l-1)*m+2*i];
           }
@@ -137,7 +137,7 @@ void kMST_MCF::createModel()
   // Constraint 12
   IloExpr constraint12 ( env );
   for ( u_int i = 0; i < m; i++ ) {
-    if ( instance.edges[i].v1 == 0 || instance.edges[i].v2 == 0 ) {
+    if ( digraph.edges[i].v1 == 0 || digraph.edges[i].v2 == 0 ) {
       constraint12 += x[i];
     }
   }
@@ -146,7 +146,7 @@ void kMST_MCF::createModel()
   // Target function
   IloExpr target ( env );
   for ( u_int i = 0; i < m; i ++ ) {
-    target += instance.edges[i].weight * x[i];
+    target += digraph.edges[i].weight * x[i];
   }
   model.add( IloMinimize( env, target ) );
   // give it a name for output
@@ -158,7 +158,7 @@ void kMST_MCF::outputVars()
   // Edge variables
   for ( u_int i = 0; i < m; i++ ) {
     if ( cplex.getValue( x[i] ) ) {
-      cout << "Edge " << instance.edges[i].v1 << "->" << instance.edges[i].v2 << endl;
+      cout << "Edge " << digraph.edges[i].v1 << "->" << digraph.edges[i].v2 << endl;
     }
   }
   // Node selections
@@ -172,12 +172,12 @@ void kMST_MCF::outputVars()
     for ( u_int j = 1; j < n; j++ ) {
       int flow = cplex.getValue( f[2*m*(j-1)+2*i] );
       if (flow > 0) {
-        cout << "Flow (" << j << ") " << instance.edges[i].v1 << "->" << instance.edges[i].v2;
+        cout << "Flow (" << j << ") " << digraph.edges[i].v1 << "->" << digraph.edges[i].v2;
         cout << "=" << flow << endl;
       }
       flow = cplex.getValue( f[2*m*(j-1)+2*i+1] );
       if (flow > 0) {
-        cout << "Flow (" << j << ") " << instance.edges[i].v2 << "->" << instance.edges[i].v1;
+        cout << "Flow (" << j << ") " << digraph.edges[i].v2 << "->" << digraph.edges[i].v1;
         cout << "=" << flow << endl;
       }
     }

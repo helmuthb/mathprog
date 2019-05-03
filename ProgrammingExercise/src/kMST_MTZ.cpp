@@ -1,7 +1,7 @@
 #include "kMST_MTZ.h"
 
-kMST_MTZ::kMST_MTZ( Instance& _instance, int _k ) :
-  kMST_ILP( _instance, "scf", _k )
+kMST_MTZ::kMST_MTZ( Digraph& _digraph, int _k ) :
+  kMST_ILP( _digraph, "scf", _k )
 {
 }
 
@@ -51,29 +51,29 @@ void kMST_MTZ::createModel()
   for ( u_int i = 0; i < m; i++ ) {
     // add variables for edges
     char varname[16];
-    sprintf( varname, "x(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
+    sprintf( varname, "x(%d,%d)", digraph.edges[i].v1, digraph.edges[i].v2 );
     x[i] = IloBoolVar( env, varname );
-    sprintf( varname, "y(%d,%d)", instance.edges[i].v1, instance.edges[i].v2 );
+    sprintf( varname, "y(%d,%d)", digraph.edges[i].v1, digraph.edges[i].v2 );
     y[2*i] = IloBoolVar( env, varname );
-    sprintf( varname, "y(%d,%d)", instance.edges[i].v2, instance.edges[i].v1 );
+    sprintf( varname, "y(%d,%d)", digraph.edges[i].v2, digraph.edges[i].v1 );
     y[2*i+1] = IloBoolVar( env, varname );
     // add constraint (2)
     model.add( y[2*i] + y[2*i+1] == x[i] );
     // add constraint (3)
-    model.add( o[instance.edges[i].v2] >= o[instance.edges[i].v1] + 1 - (1 - y[2*i])*(k+1) );
-    model.add( o[instance.edges[i].v1] >= o[instance.edges[i].v2] + 1 - (1 - y[2*i+1])*(k+1) );
+    model.add( o[digraph.edges[i].v2] >= o[digraph.edges[i].v1] + 1 - (1 - y[2*i])*(k+1) );
+    model.add( o[digraph.edges[i].v1] >= o[digraph.edges[i].v2] + 1 - (1 - y[2*i+1])*(k+1) );
   }
   // constraints (4) and (5)
   for ( u_int i = 0; i < n; i++ ) {
     IloExpr constraint4 ( env );
     IloExpr constraint5 ( env );
     for ( u_int j = 0; j < m; j++ ) {
-      if ( instance.edges[j].v1 == i ) {
+      if ( digraph.edges[j].v1 == i ) {
         model.add( x[j] <= z[i] );
         constraint4 += y[2*j];
         constraint5 += y[2*j+1];
       }
-      else if ( instance.edges[j].v2 == i ) {
+      else if ( digraph.edges[j].v2 == i ) {
         model.add( x[j] <= z[i] );
         constraint4 += y[2*j+1];
         constraint5 += y[2*j];
@@ -101,7 +101,7 @@ void kMST_MTZ::createModel()
   // Constraint 8
   IloExpr constraint8 ( env );
   for ( u_int i = 0; i < m; i++ ) {
-    if ( instance.edges[i].v1 == 0 || instance.edges[i].v2 == 0 ) {
+    if ( digraph.edges[i].v1 == 0 || digraph.edges[i].v2 == 0 ) {
       constraint8 += x[i];
     }
   }
@@ -111,7 +111,7 @@ void kMST_MTZ::createModel()
   // Target function
   IloExpr target ( env );
   for ( u_int i = 0; i < m; i ++ ) {
-    target += instance.edges[i].weight * x[i];
+    target += digraph.edges[i].weight * x[i];
   }
   model.add( IloMinimize( env, target ) );
   // give it a name for output
@@ -123,10 +123,10 @@ void kMST_MTZ::outputVars()
   // Arc variables
   for ( u_int i = 0; i < m; i++ ) {
     if ( cplex.getValue( y[2*i] ) ) {
-      cout << "Arc " << instance.edges[i].v1 << "->" << instance.edges[i].v2 << endl;
+      cout << "Arc " << digraph.edges[i].v1 << "->" << digraph.edges[i].v2 << endl;
     }
     if ( cplex.getValue( y[2*i+1] ) ) {
-      cout << "Arc " << instance.edges[i].v2 << "->" << instance.edges[i].v1 << endl;
+      cout << "Arc " << digraph.edges[i].v2 << "->" << digraph.edges[i].v1 << endl;
     }
   }
   // Node selections

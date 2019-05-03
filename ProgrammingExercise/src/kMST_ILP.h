@@ -2,7 +2,7 @@
 #define __KMST_ILP__H__
 
 #include "Tools.h"
-#include "Instance.h"
+#include "Digraph.h"
 #include "CutCallback.h"
 #include <ilcplex/ilocplex.h>
 
@@ -15,10 +15,10 @@ class kMST_ILP
 
 protected:
 
-	Instance& instance;
+	Digraph& digraph;
 	string model_type;
 	int k;
-	u_int m, n;
+	u_int m, n, a;
 
 	IloEnv env;
 	IloModel model;
@@ -38,7 +38,7 @@ protected:
 
 public:
 
-	kMST_ILP( Instance& _instance, string _model_type, int _k );
+	kMST_ILP( Digraph& _digraph, string _model_type, int _k );
 	virtual ~kMST_ILP();
 	void solve( bool verbose );
 

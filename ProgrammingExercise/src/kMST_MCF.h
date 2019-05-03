@@ -13,7 +13,7 @@ protected:
   void outputVars();
   
 public:
-  kMST_MCF( Instance& _instance, int _k );
+  kMST_MCF( Digraph& _digraph, int _k );
 
 };
 

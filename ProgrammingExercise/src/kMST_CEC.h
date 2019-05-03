@@ -12,7 +12,7 @@ protected:
   void outputVars();
 
 public:
-  	kMST_CEC( Instance& _instance, int _k );
+  	kMST_CEC( Digraph& _digraph, int _k );
 
 };
 
