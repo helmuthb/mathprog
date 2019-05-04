@@ -32,6 +32,7 @@
   round-precision     = 2, % to 2 places
 }
 \allowdisplaybreaks
+\setlength\parindent{0pt}
 \begin{document}
 \maketitle
 \begin{abstract}
@@ -43,7 +44,7 @@ based on Miller, Tucker and Zemlin \cite{mtz1960}.
 These formulations have then been implemented using \texttt{CPLEX}
 in C++.
 
-This report and the implementation can be found on GitHub:\\
+The implementation can be found on GitHub:\\
 \url{https://github.com/helmuthb/mathprog/tree/master/ProgrammingExercise}
 
 \end{abstract}
@@ -68,17 +69,31 @@ node $1$ is used.
 Additional constraints are necessary to ensure that only
 \emph{one} connection leaves the root node.
 
-One has to allow for exactly $k+1$ nodes, as the artificial root
-node will then be removed from the results.
+One has to allow for $k+1$ nodes in the resulting $k$-MST, as the
+artificial root node will be contained and is to be
+be removed from the results.
 
 Also it requires additional variables to specify the nodes
-selected.
+selected - since not all nodes will be in the $k$-MST..
+
+Most formulations performed better when based on a \emph{directed}
+formulation.
+Therefore, arcs where introduced, which exist for all edges in
+both directions - except for the root node, which only has arcs
+going out from it but not into it.
 
 In all formulations the following values are predefined:
 \begin{align*}
   n & \enskip ... \enskip \text{Number of nodes (\emph{Vertices})} \\
-  m & \enskip ... \enskip \text{Number of edges}
+  m & \enskip ... \enskip \text{Number of edges} \\
+  a & \enskip ... \enskip \text{Number of arcs}
 \end{align*}
+
+All formulations correspond 1-to-1 to the implemented
+program which was then executed.
+Constraints were introduced where try-and-error
+indicated better performance - even if they were
+redundant or stronger formulations seem possible.
 
 \section*{Single-Commodity Flows Formulation (\emph{SCF})}
 
@@ -86,20 +101,22 @@ The following variables are introduced:
 \begin{align*}
   z_i \in\{0,1\} & \enskip ... \enskip \text{Node $i$ is selected}\\
   x_{ij} \in\{0,1\} & \enskip ... \enskip\text{Edge $i,j$ is selected}\\
-  f_{ij} \in\{0,...,k\} & \enskip ... \enskip\text{\emph{Flow} from node $i$ to node $j$}
+  y_{ij} \in\{0,1\} & \enskip ... \enskip\text{Arc $i,j$ is taken
+             in the tree, going from $i$ to $j$} \\
+  f_{ij} \in[0-k] & \enskip ... \enskip\text{\emph{Flow} from node $i$ to node $j$}
 \end{align*}
 
 With this variables one can define the \emph{Single-Commodity Flows}
 formulation for the $k$-MST as follows:
 \begin{align}
-  f_{ij} & \le k\cdot x_{ij}, \enspace f_{ji} \le k\cdot x_{ij}\\
+  f_{ij} & \le k\cdot y_{ij} \quad \forall i,j \ne 0 \\
+  y_{ij} + y_{ji} & = x_{ij}\\
   x_{ij} & \le z_i, \enspace x_{ij} \le z_j \\
-  f_{j0} & = 0 \\
-  \sum_{j}f_{0j} & = k \\
+  f_{0i} & = k\cdot y_{0i}\\
   \sum_{j}f_{ij} - \sum_{j}f_{ji} & = -1\cdot z_i\quad \forall i \ne 0 \\
   \sum_{i,j}x_{ij} & = k \\
   \sum_{j} z_j & = k + 1 \\
-  \sum_{j} x_{0j} & = 1
+  \sum_{i} y_{0i} & = 1
 \end{align}
 
 \section*{Multi-Commodity Flows Formulation (\emph{MCF})}
@@ -108,7 +125,9 @@ The following variables are introduced:
 \begin{align*}
   z_i \in\{0,1\} & \enskip ... \enskip \text{Node $i$ is selected}\\
   x_{ij} \in\{0,1\} & \enskip ... \enskip\text{Edge $i,j$ is selected}\\
-  f^l_{ij} \in\{0,...,k\} & \enskip ... \enskip\text{\emph{Flow}
+  y_{ij} \in\{0,1\} & \enskip ... \enskip\text{Arc $i,j$ is taken
+             in the tree, going from $i$ to $j$} \\
+  f^l_{ij} \in[0-1] & \enskip ... \enskip\text{\emph{Flow}
              of type $l$ from node $i$ to node $j$,
              $l \in \{1, ..., n\}$}
 \end{align*}
@@ -117,20 +136,19 @@ With this variables one can define the \emph{Multi-Commodity Flows}
 formulation for the $k$-MST as follows:
 
 \begin{align}
-  f^l_{ij} & \le x_{ij} \quad \forall l \ne 0 \\
-  f^l_{ji} & \le x_{ij} \quad \forall l \ne 0 \\
-  f^l_{il} & \le z_l \quad \forall l \ne 0 \\
+  f^l_{ij} & \le y_{ij} \quad \forall l \ne 0 \\
+  y_{ij} + y_{ji} & = x_{ij}\\
   x_{ij} & \le z_i \\
   x_{ij} & \le z_j \\
-  \sum_{j}f^i_{0j} - \sum_{j}f^i_{j0} & = z_i
+  \sum_{i}y_{ij} &= z_j \\
+  \sum_{j}f^l_{ij} - \sum_{j}f^l_{ji} & = 0
+           \quad \forall i \ne l, i \ne 0, l \ne 0 \\
+  \sum_{j}f^i_{0j} & = z_i
            \quad \forall i \ne 0 \\
   \sum_{j}f^i_{ij} - \sum_{j}f^i_{ji} & = -1\cdot z_i
            \quad \forall i \ne 0 \\
-  \sum_{j}f^l_{ij} - \sum_{j}f^l_{ji} & = 0
-           \quad \forall i \ne l, i \ne 0, l \ne 0 \\
-  \sum_{i,j}x_{ij} & = k \\
-  \sum_{j} z_j & = k + 1 \\
-  \sum_{j} x_{0j} & = 1
+  \sum_{i,j}y_{ij} & = k \\
+  \sum_{i} x_{0i} & = 1
 \end{align}
 
 \section*{Sequential Formulation (\emph{MTZ})}
@@ -146,30 +164,28 @@ The basic idea is to give each node an \emph{order}
 number, which denotes in which order it will appear in the
 final $k$-MST.
 
-It defines \emph{arcs} by duplicating each given edge in
-the graph.
-
 The following variables are introduced:
 \begin{align*}
   z_i \in\{0,1\} & \enskip ... \enskip \text{Node $i$ is selected}\\
   x_{ij} \in\{0,1\} & \enskip ... \enskip\text{Edge $i,j$ is selected}\\
   y_{ij} \in\{0,1\} & \enskip ... \enskip\text{Arc $i,j$ is taken
              in the tree, going from $i$ to $j$} \\
-  o_{i} \in\{0,...,k\} & \enskip ... \enskip\text{\emph{Order}
+  u_{i} \in[0-k] & \enskip ... \enskip\text{\emph{Order}
              of node $i$ in the selected $k$-MST}
 \end{align*}
 
 With this variables one can define the \emph{Sequence (MTZ)}
 formulation for the $k$-MST as follows:
 \begin{align}
-  o_i & \le k\cdot z_i \\
-  o_i & \ge z_i \quad \forall i \ne 0 \\
   y_{ij}+y_{ji} & = x_{ij} \\
-  o_j & \ge o_i + 1 - (1 - y_{ij})\cdot k \\
+  u_j & \ge u_i + 1 - (1 - y_{ij})\cdot k \\
   \sum_{j} y_{ji} & \le z_i \\
+  x_{ij} & \le z_i \\
+  x_{ji} & \le z_i \\
   \sum_{i,j} x_{ij} & = k \\
   \sum_{j} z_j & = k + 1 \\
-  \sum_{j} x_{0j} & = 1 \\
+  \sum_{i} x_{0i} & = 1 \\
+  u_0 = 0
 \end{align}
 
 \section*{Implementation Details}
@@ -192,6 +208,12 @@ The optimizations have been executed multiple times -
 100 times for the smaller graphs down to 5 times for the last graph -
 and the median of the CPU time has been taken.
 \emph{The other results were consistent for each round.}
+
+The runtimes refer to the output from the program and indicate
+CPU time for the solver - the actual time was of course larger.
+
+The system used for the evaluation has an Intel\textregistered{}
+Xeon\textregistered{} CPU E31245 @ 3.30 GHz with 32 GB RAM.
 
 \begin{tabular}{cr|r|rrr|SSS}
 \multicolumn{3}{c}{} &
@@ -315,23 +337,24 @@ file & $k$ & Objective & \emph{SCF} & \emph{MCF} & \emph{MTZ} & \emph{SCF} & \em
 \texttt{g08.dat} &
   200 &
   5787 &
-  988 & 0 & XX &
+  988 & 0 & 11894 &
   428.01 &
-  9813.06 &
-  3.141592653 \\
+  9808.82 &
+  33.49 \\
 \end{tabular}
 
 \section*{Interpretation}
 
-The implementation for SCF seems quite good, and the performance
-is good as well.
+Performance of SCF is quite good.
+It could be used for problems of smaller and medium sized problems
+scale within acceptable time.
 
-For smaller graphs MCF is a viable option.
+Performance of MCF for smaller graphs is also good.
 However, once graphs are larger than 100 nodes its performance
 degrades very much.
 Running the evaluation for the last graph took hours to complete.
 
-\emph{It's quite possible that some tweaking with the conditions
+\emph{It's quite possible that some tweaking with the constraints
 could yield better results.}
 
 The overall "winner" so far (if this were a competition) is the

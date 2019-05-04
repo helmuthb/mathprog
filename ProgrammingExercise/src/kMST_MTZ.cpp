@@ -20,7 +20,7 @@ void kMST_MTZ::createModel()
   //   y ... boolean from {0, 1}
   //   x ... boolean from {0, 1}
   //   z ... boolean from {0, 1}
-  //   o ... number >= 0
+  //   u ... float number in [0-k]
   // Constraints:
   //   (1): y(i,j)+y(j,i) = x(i,j)
   //   (2): u(j) >= u(i) + 1 - (1-y(i,j))*k

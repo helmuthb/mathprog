@@ -108,3 +108,11 @@ test: all
 clean:
 	rm -rf obj/*.o kmst gmon.out
 
+report.aux: report.tex
+	pdflatex report
+
+report.blb: report.aux
+	bibtex report
+
+report.pdf: report.blb
+	pdflatex report
