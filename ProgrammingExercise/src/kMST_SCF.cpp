@@ -23,16 +23,15 @@ void kMST_SCF::createModel()
   //   z ... boolean from {0, 1}
   // Constraints:
   //   (1): f(i,j) <= k * y(i,j), i, j != 0
-  //        y(i,j) <= x(i,j)
+  //        y(i,j) + y(j,i) = x(i,j)
   //   (3): x(i,j) <= z(i)
   //   (4): x(i,j) <= z(j)
-  //   (5): f going to 0 = 0
-  //        f going from 0 to i = k * x(0,i)
-  //   (6): i not 0, sum over f going from i - sum over f going to i = -1 * z(i)
+  //   (5): f going from 0 to i = k * y(0,i)
+  //   (6): sum over f going from i - sum over f going to i = -z(i), i != 0
   //   (7): sum x(i,j) = k
   //   (8): sum z(j) = k + 1
-  //   (9): sum x(0,i) = 1
-  // Target function:
+  //   (9): sum y(0,i) = 1
+  // Objective function:
   //   min( sum of w[i]*x[i] )
   f = IloNumVarArray( env, a );
   x = IloBoolVarArray( env, m );
@@ -99,17 +98,11 @@ void kMST_SCF::createModel()
   }
   // Constraint 7
   IloNumExpr constraint7 ( env );
-  IloNumExpr constraint7a ( env );
   for ( u_int e = 0; e < m; e++ ) {
     constraint7 += x[e];
   }
-  for ( u_int i = 0; i < a; i++ ) {
-    constraint7a += y[i];
-  }
   model.add( constraint7 == k);
-  // model.add( constraint7a == k);
   constraint7.end();
-  constraint7a.end();
   // Constraint 8
   IloExpr constraint8 ( env );
   for ( u_int j = 0; j < n; j++ ) {
@@ -119,27 +112,19 @@ void kMST_SCF::createModel()
   constraint8.end();
   // Constraint 9
   IloNumExpr constraint9 ( env );
-  IloNumExpr constraint9a ( env );
   for ( u_int i = 0; i < a; i++ ) {
     if ( digraph.arcs[i].v1 == 0 ) {
       constraint9 += y[i];
     }
   }
-  for ( u_int e = 0; e < m; e++ ) {
-    if ( digraph.edges[e].v1 == 0 || digraph.edges[e].v2 == 0 ) {
-      constraint9a += x[e];
-    }
-  }
   model.add( constraint9 == 1 );
-  // model.add( constraint9a == 1 );
   constraint9.end();
-  constraint9a.end();
-  // Target function
-  IloExpr target ( env );
+  // Objective function
+  IloExpr objective ( env );
   for ( u_int e = 0; e < m; e ++ ) {
-    target += digraph.edges[e].weight * x[e];
+    objective += digraph.edges[e].weight * x[e];
   }
-  model.add( IloMinimize( env, target ) );
+  model.add( IloMinimize( env, objective ) );
   // give it a name for output
   model.setName("k-MST (SCF)");
 }
@@ -159,12 +144,9 @@ void kMST_SCF::outputVars()
     }
   }
   // Flow variables
-  for ( u_int i = 0; i < 0; i++ ) {
-    int flow = cplex.getValue( f[2*i] );
-    cout << "Flow " << digraph.edges[i].v1 << "->" << digraph.edges[i].v2;
-    cout << "=" << flow << endl;
-    flow = cplex.getValue( f[2*i+1] );
-    cout << "Flow " << digraph.edges[i].v2 << "->" << digraph.edges[i].v1;
+  for ( u_int i = 0; i < a; i++ ) {
+    int flow = cplex.getValue( f[i] );
+    cout << "Flow " << digraph.arcs[i].v1 << "->" << digraph.arcs[i].v2;
     cout << "=" << flow << endl;
   }
 

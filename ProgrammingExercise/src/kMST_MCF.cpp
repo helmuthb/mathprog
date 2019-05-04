@@ -24,20 +24,18 @@ void kMST_MCF::createModel()
   //   z ... boolean from {0, 1}
   // Constraints:
   //   (1): f^l(i,j) <= y(i,j), l != 0
-  //   (2): y(i,j) <= x(i,j)
-  //   !!(3): f^l(i,j) <= z(l), l != 0
-  //   (5): x(i,j) <= z(i)
-  //   (6): x(i,j) <= z(j)
+  //   (2): y(i,j) + y(j,i) = x(i,j)
+  //   (3): x(i,j) <= z(i)
+  //   (4): x(i,j) <= z(j)
+  //   (5): sum y(i,j) = z(j)
+  //   (6): sum over f^l going from j - sum over f^l going to j = 0 (for j != l, j != 0, l != 0)
   //   (7): sum over f^l going from 0 = 1 * z(l), l != 0
   //   (8): sum over f^l going from l - sum over f^l going to l = -1 * z(l), l != 0
-  //   (9): sum over f^l going from j - sum over f^l going to j = 0 (for j != l, j != 0, l != 0)
-  //   (10): sum y(i,j) = k
-  //   (11): sum z(j) = k + 1
-  //   (12): sum x(0,i) = 1
-  // Target function:
+  //   (9): sum y(i,j) = k
+  //   (10): sum x(0,i) = 1
+  // Objective function:
   //   min( sum of w[i]*x[i] )
   f = IloNumVarArray( env, a * (n-1) );
-  // f = IloBoolVarArray( env, a * (n-1) );
   x = IloBoolVarArray( env, m );
   IloBoolVarArray y = IloBoolVarArray( env, a );
   z = IloBoolVarArray( env, n );
@@ -61,38 +59,56 @@ void kMST_MCF::createModel()
     for ( u_int l = 1; l < n; l++ ) {
       sprintf( varname, "f(%d)(%d,%d)", l, digraph.arcs[i].v1, digraph.arcs[i].v2 );
       f[(l-1)*a+i] = IloNumVar( env, 0, 1, varname );
-      // f[(l-1)*a+i] = IloBoolVar( env, varname );
-      // add constraints (1), (2), (3)
+      // add constraints (1)
       model.add( f[(l-1)*a+i] <= y[i] );
     }
   }
   for ( u_int i = 0; i < a; i++ ) {
     int e = digraph.arcs[i].e;
     int o = digraph.arcs[i].o;
+    // constraint (2)
     if ( o >= 0 ) {
       model.add( y[i] + y[o] == x[e] );
     }
     else {
       model.add( y[i] == x[e] );
     }
-    // add constraints (5) and (6)
-    // model.add( y[i] <= z[digraph.arcs[i].v1] );
-    // model.add( y[i] <= z[digraph.arcs[i].v2] );
+    // add constraints (3) and (4)
     model.add( x[e] <= z[digraph.arcs[i].v1] );
     model.add( x[e] <= z[digraph.arcs[i].v2] );
   }
-  // Sum over all incoming arcs = z
+  // constraint5
   for ( u_int i = 1; i < n; i++ ) {
-    IloNumExpr constraintX ( env );
+    IloNumExpr constraint5 ( env );
     int count = 0;
     for ( u_int j = 0; j < a; j++ ) {
       if ( digraph.arcs[j].v2 == i ) {
-        constraintX += y[j];
+        constraint5 += y[j];
         count++;
       }
     }
     if ( count > 0 ) {
-      model.add( constraintX == z[i] );
+      model.add( constraint5 == z[i] );
+    }
+  }
+  // Constraint 6
+  // j ... the node we look at currently
+  // l ... the target node
+  for ( u_int j = 1; j < n; j++ ) {
+    for (u_int l = 1; l < n; l++ ) {
+      if ( j != l ) {
+        IloNumExpr constraint6( env );
+        for ( u_int i = 0; i < a; i++ ) {
+          if ( digraph.arcs[i].v1 == j ) {
+            constraint6 += f[(l-1)*a+i];
+          }
+          else if ( digraph.arcs[i].v2 == j ) {
+            constraint6 -= f[(l-1)*a+i];
+          }
+        }
+        model.add( constraint6 == 0 );
+        constraint6.end();
+      }
     }
   }
   // Constraint 7
@@ -122,54 +138,21 @@ void kMST_MCF::createModel()
     constraint8.end();
   }
   // Constraint 9
-  // j ... the node we look at currently
-  // l ... the target node
-  for ( u_int j = 1; j < n; j++ ) {
-    for (u_int l = 1; l < n; l++ ) {
-      if ( j != l ) {
-        IloNumExpr constraint9( env );
-        for ( u_int i = 0; i < a; i++ ) {
-          if ( digraph.arcs[i].v1 == j ) {
-            constraint9 += f[(l-1)*a+i];
-          }
-          else if ( digraph.arcs[i].v2 == j ) {
-            constraint9 -= f[(l-1)*a+i];
-          }
-        }
-        model.add( constraint9 == 0 );
-        constraint9.end();
-      }
-    }
+  IloNumExpr constraint9 ( env );
+  for ( u_int i = 0; i < a; i++ ) {
+    constraint9 += y[i];
   }
+  model.add( constraint9 == k);
+  constraint9.end();
   // Constraint 10
   IloNumExpr constraint10 ( env );
   for ( u_int i = 0; i < a; i++ ) {
-    constraint10 += y[i];
-  }
-  model.add( constraint10 == k);
-  constraint10.end();
-  IloNumExpr constraint10a ( env );
-  for ( u_int i = 0; i < m; i++ ) {
-    constraint10a += x[i];
-  }
-  // model.add( constraint10a == k);
-  constraint10a.end();
-  // Constraint 11
-  IloNumExpr constraint11 ( env );
-  for ( u_int j = 0; j < n; j++ ) {
-    constraint11 += z[j];
-  }
-  // model.add( constraint11 == k+1 );
-  constraint11.end();
-  // Constraint 12
-  IloNumExpr constraint12 ( env );
-  for ( u_int i = 0; i < a; i++ ) {
     if ( digraph.arcs[i].v1 == 0 ) {
-      constraint12 += y[i];
+      constraint10 += y[i];
     }
   }
-  model.add( constraint12 == 1 );
-  constraint12.end();
+  model.add( constraint10 == 1 );
+  constraint10.end();
   // Objective function
   IloNumExpr objective ( env );
   for ( u_int i = 0; i < m; i ++ ) {

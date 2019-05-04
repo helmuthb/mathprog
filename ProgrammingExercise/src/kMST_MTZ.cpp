@@ -22,16 +22,16 @@ void kMST_MTZ::createModel()
   //   z ... boolean from {0, 1}
   //   o ... number >= 0
   // Constraints:
-  //   (1): !!! u(i) <= k * z(i)
-  //        u(i) >= z(i) for i != 0
-  //   (2): y(i,j)+y(j,i) = x(i,j)
-  //   (3): u(j) >= u(i) + 1 - (1-y(i,j))*k
-  //   (4): !!! sum over j y(i,j) <= z(i)
-  //   (5): sum over j y(j,i) <= z(i)
+  //   (1): y(i,j)+y(j,i) = x(i,j)
+  //   (2): u(j) >= u(i) + 1 - (1-y(i,j))*k
+  //   (3): sum over j y(j,i) <= z(i)
+  //   (4): x(i,j) <= z(i)
+  //   (5): x(j,i) <= z(i)
   //   (6): sum x(i,j) = k
   //   (7): sum z(j) = k + 1
   //   (8): sum x(0,i) = 1
-  // Target function:
+  //   (9): u(0) = 0
+  // Objective function:
   //   min( sum of w[i]*x[i] )
   y = IloBoolVarArray( env, a );
   x = IloBoolVarArray( env, m );
@@ -44,8 +44,6 @@ void kMST_MTZ::createModel()
     z[j] = IloBoolVar( env, varname );
     sprintf( varname, "u(%d)", j );
     u[j] = IloNumVar( env, 0, k, varname );
-    // add constraint (1)
-    // model.add( u[j] <= k * z[j] );
   }
   for ( u_int i = 0; i < m; i++ ) {
     // add variables for edges
@@ -61,19 +59,19 @@ void kMST_MTZ::createModel()
   for ( u_int i = 0; i < a; i++ ) {
     int o = digraph.arcs[i].o;
     int e = digraph.arcs[i].e;
-    // add constraint (2)
+    // add constraint (1)
     if ( o >= 0 ) {
       model.add( y[i] + y[o] == x[e] );
     }
     else {
       model.add( y[i] == x[e] );
     }
-    // add constraint (3)
+    // add constraint (2)
     model.add( u[digraph.arcs[i].v2] >= u[digraph.arcs[i].v1] + 1 - (1 - y[i])*(k+1) );
   }
-  // constraints (4) and (5)
+  // constraints (3), (4) and (5)
   for ( u_int i = 0; i < n; i++ ) {
-    IloExpr constraint5 ( env );
+    IloExpr constraint3 ( env );
     for ( u_int j = 0; j < a; j++ ) {
       int e = digraph.arcs[j].e;
       if ( digraph.arcs[j].v1 == i ) {
@@ -81,11 +79,11 @@ void kMST_MTZ::createModel()
       }
       if ( digraph.arcs[j].v2 == i ) {
         model.add( x[e] <= z[i] );
-        constraint5 += y[j];
+        constraint3 += y[j];
       }
     }
-    model.add( constraint5 <= z[i] );
-    constraint5.end();
+    model.add( constraint3 <= z[i] );
+    constraint3.end();
   }
   // Constraint 6
   IloExpr constraint6 ( env );
@@ -111,12 +109,12 @@ void kMST_MTZ::createModel()
   model.add( constraint8 == 1 );
   constraint8.end();
   model.add( u[0] == 0 );
-  // Target function
-  IloExpr target ( env );
+  // Objective function
+  IloExpr objective ( env );
   for ( u_int i = 0; i < m; i ++ ) {
-    target += digraph.edges[i].weight * x[i];
+    objective += digraph.edges[i].weight * x[i];
   }
-  model.add( IloMinimize( env, target ) );
+  model.add( IloMinimize( env, objective ) );
   // give it a name for output
   model.setName("k-MST (MTZ)");
 }
@@ -124,12 +122,9 @@ void kMST_MTZ::createModel()
 void kMST_MTZ::outputVars()
 {
   // Arc variables
-  for ( u_int i = 0; i < m; i++ ) {
-    if ( cplex.getValue( y[2*i] ) ) {
+  for ( u_int i = 0; i < a; i++ ) {
+    if ( cplex.getValue( y[i] ) ) {
       cout << "Arc " << digraph.edges[i].v1 << "->" << digraph.edges[i].v2 << endl;
-    }
-    if ( cplex.getValue( y[2*i+1] ) ) {
-      cout << "Arc " << digraph.edges[i].v2 << "->" << digraph.edges[i].v1 << endl;
     }
   }
   // Node selections
@@ -141,9 +136,7 @@ void kMST_MTZ::outputVars()
   // Order variables
   for ( u_int i = 0; i < n; i++ ) {
     int order = cplex.getValue( u[i] );
-    if (order > 0) {
-      cout << "Order (" << i << ") = " << order << endl;
-    }
+    cout << "Order (" << i << ") = " << order << endl;
   }
 
 }

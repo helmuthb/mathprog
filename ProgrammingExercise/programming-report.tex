@@ -1,0 +1,369 @@
+\documentclass[11pt, oneside, a4paper, fleqn]{article}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage[english]{babel}
+\geometry{a4paper,margin=30mm}
+\usepackage{graphicx}	
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{tikz}
+\usepackage{tkz-graph}
+\usepackage{listings}
+\usepackage{siunitx}
+\usepackage{arydshln}
+\usepackage{enumitem}
+\rhead{Helmuth Breitenfellner (08725866)}
+\chead{}
+\lhead{Mathematical Programming}
+\rfoot{Page \thepage{} of \pageref{LastPage}}
+\lfoot{Programming Exercise}
+\cfoot{}
+\pagestyle{fancy}
+\renewcommand{\footrulewidth}{0.4pt}
+\author{Helmuth Breitenfellner}
+\title{Mathematical Programming\\
+       Programming Exercise\\
+       Part 1: Compact Formulations}
+\date{}
+\sisetup{
+  round-mode          = places, % Rounds numbers
+  round-precision     = 2, % to 2 places
+}
+\allowdisplaybreaks
+\begin{document}
+\maketitle
+\begin{abstract}
+This report describes the formulations of the $k$-nodes
+Minimal Spanning Tree ($k$-MST).
+The formulations are based on \textit{Single-Commodity Flows},
+\textit{Multi-Commodity Flows} and the \textit{Sequential Formulation}
+based on Miller, Tucker and Zemlin \cite{mtz1960}.
+These formulations have then been implemented using \texttt{CPLEX}
+in C++.
+
+This report and the implementation can be found on GitHub:\\
+\url{https://github.com/helmuthb/mathprog/tree/master/ProgrammingExercise}
+
+\end{abstract}
+\section*{$k$-nodes Minimal Spanning Tree}
+
+The $k$-MST task is to find the \emph{Minimal Spanning Tree} which
+contains exactly $k$ nodes and minimizes the \emph{weight sum}
+of the edges.
+
+Existing formulations from the regular MST can be applied, but
+some adjustment is necessary.
+
+For the regular MST one can choose any node as the root of
+the spanning tree, since each node will be contained.
+This is in the literature usually the node $1$.
+However, for the \emph{$k$-MST} this is not the case.
+Therefore one introduces an artificial \emph{root node},
+which has edges to all other nodes with weight $0$.
+
+This root node is then used in the formulations where normally the
+node $1$ is used.
+Additional constraints are necessary to ensure that only
+\emph{one} connection leaves the root node.
+
+One has to allow for exactly $k+1$ nodes, as the artificial root
+node will then be removed from the results.
+
+Also it requires additional variables to specify the nodes
+selected.
+
+In all formulations the following values are predefined:
+\begin{align*}
+  n & \enskip ... \enskip \text{Number of nodes (\emph{Vertices})} \\
+  m & \enskip ... \enskip \text{Number of edges}
+\end{align*}
+
+\section*{Single-Commodity Flows Formulation (\emph{SCF})}
+
+The following variables are introduced:
+\begin{align*}
+  z_i \in\{0,1\} & \enskip ... \enskip \text{Node $i$ is selected}\\
+  x_{ij} \in\{0,1\} & \enskip ... \enskip\text{Edge $i,j$ is selected}\\
+  f_{ij} \in\{0,...,k\} & \enskip ... \enskip\text{\emph{Flow} from node $i$ to node $j$}
+\end{align*}
+
+With this variables one can define the \emph{Single-Commodity Flows}
+formulation for the $k$-MST as follows:
+\begin{align}
+  f_{ij} & \le k\cdot x_{ij}, \enspace f_{ji} \le k\cdot x_{ij}\\
+  x_{ij} & \le z_i, \enspace x_{ij} \le z_j \\
+  f_{j0} & = 0 \\
+  \sum_{j}f_{0j} & = k \\
+  \sum_{j}f_{ij} - \sum_{j}f_{ji} & = -1\cdot z_i\quad \forall i \ne 0 \\
+  \sum_{i,j}x_{ij} & = k \\
+  \sum_{j} z_j & = k + 1 \\
+  \sum_{j} x_{0j} & = 1
+\end{align}
+
+\section*{Multi-Commodity Flows Formulation (\emph{MCF})}
+
+The following variables are introduced:
+\begin{align*}
+  z_i \in\{0,1\} & \enskip ... \enskip \text{Node $i$ is selected}\\
+  x_{ij} \in\{0,1\} & \enskip ... \enskip\text{Edge $i,j$ is selected}\\
+  f^l_{ij} \in\{0,...,k\} & \enskip ... \enskip\text{\emph{Flow}
+             of type $l$ from node $i$ to node $j$,
+             $l \in \{1, ..., n\}$}
+\end{align*}
+
+With this variables one can define the \emph{Multi-Commodity Flows}
+formulation for the $k$-MST as follows:
+
+\begin{align}
+  f^l_{ij} & \le x_{ij} \quad \forall l \ne 0 \\
+  f^l_{ji} & \le x_{ij} \quad \forall l \ne 0 \\
+  f^l_{il} & \le z_l \quad \forall l \ne 0 \\
+  x_{ij} & \le z_i \\
+  x_{ij} & \le z_j \\
+  \sum_{j}f^i_{0j} - \sum_{j}f^i_{j0} & = z_i
+           \quad \forall i \ne 0 \\
+  \sum_{j}f^i_{ij} - \sum_{j}f^i_{ji} & = -1\cdot z_i
+           \quad \forall i \ne 0 \\
+  \sum_{j}f^l_{ij} - \sum_{j}f^l_{ji} & = 0
+           \quad \forall i \ne l, i \ne 0, l \ne 0 \\
+  \sum_{i,j}x_{ij} & = k \\
+  \sum_{j} z_j & = k + 1 \\
+  \sum_{j} x_{0j} & = 1
+\end{align}
+
+\section*{Sequential Formulation (\emph{MTZ})}
+
+The Sequential Formulation was introduced by Miller, Tucker and
+Zemlin in \cite{mtz1960}.
+
+It is an extremely compact formulation (having only a small
+number of conditions) but the LP-relaxation has a large Polyhedron
+(see e.g. \cite{padberg1991}).
+
+The basic idea is to give each node an \emph{order}
+number, which denotes in which order it will appear in the
+final $k$-MST.
+
+It defines \emph{arcs} by duplicating each given edge in
+the graph.
+
+The following variables are introduced:
+\begin{align*}
+  z_i \in\{0,1\} & \enskip ... \enskip \text{Node $i$ is selected}\\
+  x_{ij} \in\{0,1\} & \enskip ... \enskip\text{Edge $i,j$ is selected}\\
+  y_{ij} \in\{0,1\} & \enskip ... \enskip\text{Arc $i,j$ is taken
+             in the tree, going from $i$ to $j$} \\
+  o_{i} \in\{0,...,k\} & \enskip ... \enskip\text{\emph{Order}
+             of node $i$ in the selected $k$-MST}
+\end{align*}
+
+With this variables one can define the \emph{Sequence (MTZ)}
+formulation for the $k$-MST as follows:
+\begin{align}
+  o_i & \le k\cdot z_i \\
+  o_i & \ge z_i \quad \forall i \ne 0 \\
+  y_{ij}+y_{ji} & = x_{ij} \\
+  o_j & \ge o_i + 1 - (1 - y_{ij})\cdot k \\
+  \sum_{j} y_{ji} & \le z_i \\
+  \sum_{i,j} x_{ij} & = k \\
+  \sum_{j} z_j & = k + 1 \\
+  \sum_{j} x_{0j} & = 1 \\
+\end{align}
+
+\section*{Implementation Details}
+
+The implementation used the framework provided in the lecture.
+
+Some adaptations include:
+\begin{itemize}
+\item Use subclasses of the \texttt{kMST\_ILP} class
+      for the algorithms
+\item Allow output of results with a \texttt{-v} option
+\item Don't add callbacks (they come lated for \emph{CEC} and \emph{DCC} model)
+\end{itemize}
+
+Other than that the framework was (hopefully) used as supposed.
+
+\section*{Output Table}
+
+The optimizations have been executed multiple times -
+100 times for the smaller graphs down to 5 times for the last graph -
+and the median of the CPU time has been taken.
+\emph{The other results were consistent for each round.}
+
+\begin{tabular}{cr|r|rrr|SSS}
+\multicolumn{3}{c}{} &
+% file & $k$ & Objective & 
+  \multicolumn{3}{c}{BnB-Nodes} &
+  \multicolumn{3}{c}{CPU Time} \\
+file & $k$ & Objective & \emph{SCF} & \emph{MCF} & \emph{MTZ} & \emph{SCF} & \emph{MCF} & \emph{MTZ} \\
+\hline
+\texttt{g01.dat} &
+  2 &
+  46 &
+  0 & 0 & 0 &
+  0.02 &
+  0.03 &
+  0.02 \\
+\texttt{g01.dat} &
+  5 &
+  477 &
+  0 & 0 & 0 &
+  0.02 &
+  0.04 &
+  0.02 \\
+\hdashline
+\texttt{g02.dat} &
+  4 &
+  373 &
+  0 & 0 & 0 &
+  0.04 &
+  0.02 &
+  0.03 \\
+\texttt{g02.dat} &
+  10 &
+  1390 &
+  0 & 0 & 0 &
+  0.10 &
+  0.10 &
+  0.05 \\
+\hdashline
+\texttt{g03.dat} &
+  10 &
+  725 &
+  0 & 0 & 0 &
+  0.07 &
+  0.42 &
+  0.10 \\
+\texttt{g03.dat} &
+  25 &
+  3074 &
+  0 & 0 & 807 &
+  0.14 &
+  0.54 &
+  0.56 \\
+\hdashline
+\texttt{g04.dat} &
+  14 &
+  909 &
+  0 & 30 & 3 &
+  0.15 &
+  4.28 &
+  0.17 \\
+\texttt{g04.dat} &
+  35 &
+  3292 &
+  0 & 0 & 355 & 
+  0.22 &
+  1.62 &
+  0.43 \\
+\hdashline
+\texttt{g05.dat} &
+  20 &
+  1235 &
+  0 & 0 & 186 &
+  0.27 &
+  3.19 &
+  0.52 \\
+\texttt{g05.dat} &
+  50 &
+  4898 &
+  0 & 0 & 2390 &
+  0.81 &
+  3.17 &
+  3.63 \\
+\hdashline
+\texttt{g06.dat} &
+  40 &
+  2068 &
+  251 & 27 & 4957 &
+  5.54 &
+  116.41 &
+  10.16 \\
+\texttt{g06.dat} &
+  100 &
+  6705 &
+  537 & 33 & 5077 &
+  22.33 &
+  267.45 &
+  10.81 \\
+\hdashline
+\texttt{g07.dat} &
+  60 &
+  1335 &
+  487 & 0 & 911 &
+  20.37 &
+  165.32 &
+  11.16 \\
+\texttt{g07.dat} &
+  150 &
+  4534 &
+  974 & 0 & 1791 &
+  404.69 &
+  500.42 &
+  18.04 \\
+\hdashline
+\texttt{g08.dat} &
+  80 &
+  1620 &
+  462 & 0 & 998 &
+  160.90 &
+  406.22 &
+  12.14 \\
+\texttt{g08.dat} &
+  200 &
+  5787 &
+  988 & 0 & XX &
+  428.01 &
+  9813.06 &
+  3.141592653 \\
+\end{tabular}
+
+\section*{Interpretation}
+
+The implementation for SCF seems quite good, and the performance
+is good as well.
+
+For smaller graphs MCF is a viable option.
+However, once graphs are larger than 100 nodes its performance
+degrades very much.
+Running the evaluation for the last graph took hours to complete.
+
+\emph{It's quite possible that some tweaking with the conditions
+could yield better results.}
+
+The overall "winner" so far (if this were a competition) is the
+MTZ formulation. Its compact size makes it a good choice for
+both small and large graphs.
+
+\subsection*{Branch-and-Bound Nodes}
+
+The number of Branch-and-Bound Nodes can be seen as a measurement
+of the strength of the Polyhedron of the LP-relaxation.
+The smaller the Polyhedron is, the higher the probability that
+no branch-and-bound is needed and that the best (LP) solution
+is already integer.
+
+This interpretation is generally consistent with the results.
+MTZ is known to have a large Polyhedron for the LP-relaxation,
+and consistently the number of BnB-nodes is largest for it.
+
+MCF is known to have a very tight Polyhedron for the LP-relaxation,
+and consistently the number of BnB-nodes is smallest for it.
+
+However, due to the excess number of variables and conditions
+its performance is degraded.
+
+One surprise is the high number of BnB-nodes for the medium
+sized graphs with the MTZ algorithm.
+I do not have a conclusive explanation for this, other than
+that CPLEX is a sophisticated piece of software which
+uses a combination of optimization algorithms combined
+with heuristics, and that these optimizations might influence the
+number of BnB-nodes beyond the characteristics of the MILP.
+
+\bibliographystyle{plain}
+\bibliography{citations}
+\end{document}  

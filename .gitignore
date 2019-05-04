@@ -1,3 +1,8 @@
 *.o
 Exercise3/solver
 ProgrammingExercise/kmst
+*.aux
+*.log
+*.bbl
+*.out
+*.blg
