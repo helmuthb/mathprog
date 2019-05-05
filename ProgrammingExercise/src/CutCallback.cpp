@@ -1,9 +1,9 @@
 #include "CutCallback.h"
 
-CutCallback::CutCallback( IloEnv& _env, string _cut_type, double _eps, Instance& _instance, IloBoolVarArray& _x, IloBoolVarArray& _z ) :
-	LazyConsI( _env ), UserCutI( _env ), env( _env ), cut_type( _cut_type ), eps( _eps ), instance( _instance ), x( _x ), z( _z )
+CutCallback::CutCallback( IloEnv& _env, string _cut_type, double _eps, Digraph& _digraph, IloBoolVarArray& _x, IloBoolVarArray& _z ) :
+	LazyConsI( _env ), UserCutI( _env ), env( _env ), cut_type( _cut_type ), eps( _eps ), digraph( _digraph ), x( _x ), z( _z ),
+	arc_weights( 2 * digraph.n_edges )
 {
-	arc_weights.resize( 2 * instance.n_edges );
 }
 
 CutCallback::~CutCallback()
@@ -23,10 +23,10 @@ void CutCallback::connectionCuts()
 {
 	try {
 
-		u_int n = instance.n_nodes;
-		u_int m = instance.n_edges;
+		u_int n = digraph.n_nodes;
+		u_int m = digraph.n_edges;
 
-		IloNumArray xval( env, 2 * m );
+		IloNumArray xval( env, m );
 		IloNumArray zval( env, n );
 
 		if( lazy ) {
@@ -67,10 +67,11 @@ void CutCallback::cycleEliminationCuts()
 {
 	try {
 
-		u_int n = instance.n_nodes;
-		u_int m = instance.n_edges;
+		u_int n = digraph.n_nodes;
+		u_int m = digraph.n_edges;
+		vector<bool> edge_found( m );
 
-		IloNumArray xval( env, 2 * m );
+		IloNumArray xval( env, m );
 		IloNumArray zval( env, n );
 
 		if( lazy ) {
@@ -82,14 +83,70 @@ void CutCallback::cycleEliminationCuts()
 			UserCutI::getValues( zval, z );
 		}
 
-		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		// TODO find violated cycle elimination cut inequalities
-		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// initialize arc weights: 1 - x
+		// and set edge_found to false
+		for ( u_int i = 0; i < m; i++ ) {
+			arc_weights[i] = 1 - xval[i];
+			arc_weights[i+m] = 1 - xval[i];
+			edge_found[i] = false;
+		}
 
-		// add found violated cut to model
-		//if( lazy ) LazyConsI::add( ... );
-		//else UserCutI::add( ... );
-
+		// we look for cycles, and before we shuffle the
+		// indices
+		vector<u_int> shuffled ( m );
+		for ( u_int i = 0; i < m; i++ ) {
+			shuffled.push_back(i);
+		}
+		random_shuffle( shuffled.begin(), shuffled.end() );
+		for ( vector<u_int>::iterator it1 = shuffled.begin();
+					it1 != shuffled.end(); ++it1 ) {
+			u_int i = *it1;
+			if (edge_found[i]) {
+				// we already found a cycle involving this edge
+				// so let's skip it
+				continue;
+			}
+			u_int v1 = digraph.edges[i].v1;
+			u_int v2 = digraph.edges[i].v2;
+			// exclude this edge by setting the weight to high number
+			double oldWeight = arc_weights[i];
+			arc_weights[i] = MAXFLOAT;
+			arc_weights[i+m] = MAXFLOAT;
+			// calculate shortest path from v1 to v2
+			CutCallback::SPResultT spResult = shortestPath( v1, v2 );
+			// reset weight
+			arc_weights[i] = oldWeight;
+			arc_weights[i+m] = oldWeight;
+			double compareValue = spResult.weight + arc_weights[i];
+			int spSize = spResult.path.size();
+			if (spSize >= 1 && compareValue < 1 - eps) {
+				// cerr << "New constraint found!" << endl;
+				// we found a new constraint to add!
+				IloNumExpr constraint( env );
+				list<u_int>::iterator it;
+				for ( it = spResult.path.begin(); it != spResult.path.end(); ++it ) {
+					u_int e = *it;
+					if ( e >= m ) {
+						e -= m;
+					}
+					constraint += x[e];
+					edge_found[e] = true;
+					// cerr << e << " ";
+				}
+				// add node i
+				constraint += x[i];
+				edge_found[i] = true;
+				// cerr << i << "<=" << (spSize+1) << endl;
+				if ( lazy ) {
+					LazyConsI::add( constraint <= spSize );
+				}
+				else {
+					UserCutI::add( constraint <= spSize );
+				}
+				constraint.end();
+				return;
+			}
+		}
 		xval.end();
 		zval.end();
 
@@ -110,8 +167,8 @@ void CutCallback::cycleEliminationCuts()
  */
 CutCallback::SPResultT CutCallback::shortestPath( u_int source, u_int target )
 {
-	u_int n = instance.n_nodes;
-	u_int m = instance.n_edges;
+	u_int n = digraph.n_nodes;
+	u_int m = digraph.n_edges;
 	vector<SPNodeT> nodes( n );
 	vector<bool> finished( n, false ); // indicates finished nodes
 
@@ -145,17 +202,17 @@ CutCallback::SPResultT CutCallback::shortestPath( u_int source, u_int target )
 
 		// update all adjacent nodes on outgoing arcs
 		list<u_int>::iterator it;
-		for( it = instance.incidentEdges[v].begin(); it != instance.incidentEdges[v].end(); it++ ) {
+		for( it = digraph.incidentEdges[v].begin(); it != digraph.incidentEdges[v].end(); it++ ) {
 			u_int e = *it; // edge id
 			u_int a; // according arc id
 			u_int u; // adjacent node
-			if( instance.edges[e].v1 == v ) {
+			if( digraph.edges[e].v1 == v ) {
 				a = e;
-				u = instance.edges[e].v2;
+				u = digraph.edges[e].v2;
 			}
 			else {
 				a = e + m;
-				u = instance.edges[e].v1;
+				u = digraph.edges[e].v1;
 			}
 			// only examine adjacent node if unfinished
 			if( !finished[u] ) {

@@ -1,7 +1,7 @@
 #ifndef CUTCALLBACK_H_
 #define CUTCALLBACK_H_
 
-#include "Instance.h"
+#include "Digraph.h"
 #include "Maxflow.h"
 #include <ilcplex/ilocplex.h>
 
@@ -78,7 +78,7 @@ private:
 	IloEnv& env;
 	string cut_type;
 	double eps;
-	Instance& instance;
+	Digraph& digraph;
 	IloBoolVarArray& x;
 	IloBoolVarArray& z;
 
@@ -116,7 +116,7 @@ private:
 
 public:
 
-	CutCallback( IloEnv& _env, string _cut_type, double _eps, Instance& _instance, IloBoolVarArray& _x, IloBoolVarArray& _z );
+	CutCallback( IloEnv& _env, string _cut_type, double _eps, Digraph& _digraph, IloBoolVarArray& _x, IloBoolVarArray& _z );
 	virtual ~CutCallback();
 
 	// entry for lazy constraint callback (called for integer solutions)

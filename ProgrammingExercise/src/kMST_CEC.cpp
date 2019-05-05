@@ -7,26 +7,30 @@ kMST_CEC::kMST_CEC( Digraph& _digraph, int _k, bool _quiet ) :
 
 void kMST_CEC::createModel()
 {
-  // SCF is a directed formulation which will then be "cast" back to an
+  // CEC is a directed formulation which will then be "cast" back to an
   // undirected solution
   // We have two times as many arcs as we have edges (always in two directions)
   // And we have an artificial root node 0 - so our tree should have (k+1) nodes.
   // k will take the role of (n-1) in the normal MST formulation.
   // Variables:
   //   x(i,j) - edge (i,j) selected
+  //   y(i,j) - arc (i,j) selected
   //   z(i) - node i selected
   //   x ... boolean from {0, 1}
+  //   y ... boolean from {0, 1}
   //   z ... boolean from {0, 1}
   // Constraints:
   //   (1): x(i,j) <= z(i)
   //   (2): x(i,j) <= z(j)
-  //   (3): sum x(i,j) = k
-  //   (4): sum z(j) = k + 1
-  //   (5): sum x(0,i) = 1
+  //   (3): y(i,j)+y(j,i) = x(i,j)
+  //   (4): sum x(i,j) = k
+  //   (5): sum z(j) = k + 1
+  //   (6): sum x(0,i) = 1
   //   ... all other constraints are added dynamically in callbacks ...
   // Target function:
   //   min( sum of w[i]*x[i] )
   x = IloBoolVarArray( env, m );
+  IloBoolVarArray y = IloBoolVarArray( env, a );
   z = IloBoolVarArray( env, n );
   for ( u_int j = 0; j < n; j++ ) {
     // add variables for nodes
@@ -39,39 +43,56 @@ void kMST_CEC::createModel()
     char varname[16];
     sprintf( varname, "x(%d,%d)", digraph.edges[i].v1, digraph.edges[i].v2 );
     x[i] = IloBoolVar( env, varname );
-    // add constraints (1) and (2)
+    // add constraint (1) and (2)
     model.add( x[i] <= z[digraph.edges[i].v1] );
     model.add( x[i] <= z[digraph.edges[i].v2] );
   }
-  // Constraint 3
-  IloExpr constraint3 ( env );
-  for ( u_int i = 0; i < m; i++ ) {
-    constraint3 += x[i];
+  for ( u_int i = 0; i < a; i++ ) {
+    // add variable for arcs
+    char varname[16];
+    sprintf( varname, "y(%d,%d)", digraph.arcs[i].v1, digraph.arcs[i].v2 );
+    y[i] = IloBoolVar( env, varname );
   }
-  model.add( constraint3 == k);
-  constraint3.end();
+  for ( u_int i = 0; i < a; i++ ) {
+    int e = digraph.arcs[i].e;
+    int o = digraph.arcs[i].o;
+    // constraint 3
+    if ( o >= 0 ) {
+      model.add( y[i] + y[o] == x[e] );
+    }
+    else {
+      model.add( y[i] == x[e] );
+    }
+  }
   // Constraint 4
   IloExpr constraint4 ( env );
-  for ( u_int j = 0; j < n; j++ ) {
-    constraint4 += z[j];
+  for ( u_int i = 0; i < m; i++ ) {
+    constraint4 += x[i];
   }
-  model.add( constraint4 == k+1 );
+  model.add( constraint4 == k);
   constraint4.end();
   // Constraint 5
   IloExpr constraint5 ( env );
-  for ( u_int i = 0; i < m; i++ ) {
-    if ( digraph.edges[i].v1 == 0 || digraph.edges[i].v2 == 0 ) {
-      constraint5 += x[i];
+  for ( u_int j = 0; j < n; j++ ) {
+    constraint5 += z[j];
+  }
+  model.add( constraint5 == k+1 );
+  constraint5.end();
+  // Constraint 6
+  IloNumExpr constraint6 ( env );
+  for ( u_int i = 0; i < a; i++ ) {
+    if ( digraph.arcs[i].v1 == 0 ) {
+      constraint6 += y[i];
     }
   }
-  model.add( constraint5 == 1 );
-  constraint5.end();
-  // Target function
-  IloExpr target ( env );
+  model.add( constraint6 == 1 );
+  constraint6.end();
+  // Objective function
+  IloExpr objective ( env );
   for ( u_int i = 0; i < m; i ++ ) {
-    target += digraph.edges[i].weight * x[i];
+    objective += digraph.edges[i].weight * x[i];
   }
-  model.add( IloMinimize( env, target ) );
+  model.add( IloMinimize( env, objective ) );
   // give it a name for output
   model.setName("k-MST (CEC)");
 }
