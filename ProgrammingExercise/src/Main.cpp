@@ -9,6 +9,7 @@
 #include "kMST_MCF.h"
 #include "kMST_MTZ.h"
 #include "kMST_CEC.h"
+#include "kMST_DCC.h"
 
 using namespace std;
 
@@ -67,9 +68,12 @@ int main( int argc, char *argv[] )
 	else if ( model_type == "cec" ) {
 		ilp = new kMST_CEC( instance, k, quiet );
 	}
+	else if ( model_type == "dcc" ) {
+		ilp = new kMST_DCC( instance, k, quiet );
+	}
 	else {
 		cerr << "Sorry, this model '" << model_type << "' is not yet implemented!" << endl;
-		cerr << "You can currently only use 'scf', 'mcf', 'mtz' and 'cec'." << endl;
+		cerr << "You can currently only use 'scf', 'mcf', 'mtz', 'cec' and 'dcc'." << endl;
 		return 1;
 	}
 	ilp->solve( verbose );

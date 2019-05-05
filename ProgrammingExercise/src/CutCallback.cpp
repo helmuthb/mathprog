@@ -25,8 +25,9 @@ void CutCallback::connectionCuts()
 
 		u_int n = digraph.n_nodes;
 		u_int m = digraph.n_edges;
+		u_int a = digraph.n_arcs;
 
-		IloNumArray xval( env, m );
+		IloNumArray xval( env, 2*m );
 		IloNumArray zval( env, n );
 
 		if( lazy ) {
@@ -38,14 +39,92 @@ void CutCallback::connectionCuts()
 			UserCutI::getValues( zval, z );
 		}
 
-		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		// TODO find violated directed connection cut inequalities
-		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// allocate memory (to be free'd at the end)
+		double *capacity = new double[a];
+		int *cuts = new int[n];
 
-		// add found violated cut to model
-		//if( lazy ) LazyConsI::add( ... );
-		//else UserCutI::add( ... );
+		// initialize arc capacities with x
+		list<pair<u_int, u_int> > arcs;
+		for ( u_int i = 0; i < a; i++ ) {
+			capacity[i] = xval[i];
+			u_int v1 = digraph.arcs[i].v1;
+			u_int v2 = digraph.arcs[i].v2;
+			arcs.push_back(pair<u_int, u_int>( v1, v2 ));
+		}
 
+		// initialize MaxFlow algorithm
+		Maxflow mflow ( n, a, arcs );
+		bool mflow_initialized = false;
+
+		// we look for minimum capacity cut < 2
+		// and before we shuffle the indices
+		vector<u_int> shuffled ( n );
+		for ( u_int i = 0; i < n; i++ ) {
+			shuffled.push_back( i );
+		}
+		random_shuffle( shuffled.begin(), shuffled.end() );
+		for ( vector<u_int>::iterator it1 = shuffled.begin();
+					it1 != shuffled.end(); ++it1 ) {
+			u_int i = *it1;
+			// we will always look for flow from 0 to i.
+			// so if i == 0 we take the next i
+			if ( i == 0 ) {
+				continue;
+			}
+			if ( mflow_initialized ) {
+				mflow.update( 0, i );
+			}
+			else {
+				mflow.update( 0, i, capacity );
+			}
+			// get the minimal flow
+			double min_cut = mflow.min_cut( 2 - eps, cuts );
+			if ( min_cut < 2 - eps ) {
+				// we found a cut which violates the DCC constraint
+				// we sum up the cuts in both directions and add the
+				// one which violates the condition
+				IloExpr constraint1 ( env );
+				double sum1 = 0.;
+				IloExpr constraint2 ( env );
+				double sum2 = 0.;
+				for ( u_int j = 0; j < a; j++ ) {
+					u_int v1 = digraph.arcs[j].v1;
+					u_int v2 = digraph.arcs[j].v2;
+					if ( cuts[v1] * cuts[v2] == 2 ) {
+						if ( cuts[v1] == 1 ) {
+							constraint1 += x[j];
+							sum1 += xval[j];
+						}
+						else {
+							constraint2 += x[j];
+							sum2 += xval[j];
+						}
+					}
+				}
+				if ( sum1 < 1 - eps ) {
+					if ( lazy ) {
+						LazyConsI::add( constraint1 >= 1 );
+					}
+					else {
+						UserCutI::add( constraint1 >=1 );
+					}
+				}
+				if ( sum2 < 1 - eps ) {
+					if ( lazy ) {
+						LazyConsI::add( constraint2 >= 1 );
+					}
+					else {
+						UserCutI::add( constraint2 >=1 );
+					}
+				}
+				constraint1.end();
+				constraint2.end();
+				break;
+			}
+		}
+		// free memory
+		delete[] ( capacity );
+		delete[] ( cuts );
 		xval.end();
 		zval.end();
 
@@ -144,7 +223,7 @@ void CutCallback::cycleEliminationCuts()
 					UserCutI::add( constraint <= spSize );
 				}
 				constraint.end();
-				return;
+				break;
 			}
 		}
 		xval.end();
