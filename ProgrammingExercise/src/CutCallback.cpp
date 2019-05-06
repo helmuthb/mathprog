@@ -80,46 +80,44 @@ void CutCallback::connectionCuts()
 			// get the minimal flow
 			double min_cut = mflow.min_cut( 2 - eps, cuts );
 			if ( min_cut < 2 - eps ) {
-				// we found a cut which violates the DCC constraint
-				// we sum up the cuts in both directions and add the
-				// one which violates the condition
-				IloExpr constraint1 ( env );
-				double sum1 = 0.;
-				IloExpr constraint2 ( env );
-				double sum2 = 0.;
-				for ( u_int j = 0; j < a; j++ ) {
-					u_int v1 = digraph.arcs[j].v1;
-					u_int v2 = digraph.arcs[j].v2;
-					if ( cuts[v1] * cuts[v2] == 2 ) {
-						if ( cuts[v1] == 1 ) {
-							constraint1 += x[j];
-							sum1 += xval[j];
+				// count the nodes on both sides - it must be at least 2
+				// in each
+				u_int count1 = 0;
+				u_int count2 = 0;
+				for ( u_int j = 0; j < n; j++ ) {
+					count1 += (cuts[j] == 1) ? 1 : 0;
+					count2 += (cuts[j] == 2) ? 1 : 0;
+				}
+				if ( count1 > 1 && count2 > 1 ) {
+					// we found a cut which violates the DCC constraint
+					// we sum up the cuts in both directions and add the
+					// one which violates the condition
+					IloExpr constraint ( env );
+					double sum = 0.;
+					for ( u_int j = 0; j < a; j++ ) {
+						u_int v1 = digraph.arcs[j].v1;
+						u_int v2 = digraph.arcs[j].v2;
+						if ( cuts[v1] == 1 && cuts[v2] == 2 ) {
+							constraint += x[j];
+							sum += xval[j];
+							cerr << v1 << "->" << v2 << " ";
+						}
+					}
+					if ( sum < 1 - eps ) {
+						cerr << "activated";
+						if ( lazy ) {
+							LazyConsI::add( constraint >= 1 );
 						}
 						else {
-							constraint2 += x[j];
-							sum2 += xval[j];
+							UserCutI::add( constraint >=1 );
 						}
 					}
-				}
-				if ( sum1 < 1 - eps ) {
-					if ( lazy ) {
-						LazyConsI::add( constraint1 >= 1 );
-					}
-					else {
-						UserCutI::add( constraint1 >=1 );
+					cerr << endl;
+					constraint.end();
+					if ( sum < 1 - eps ) {
+						break;
 					}
 				}
-				if ( sum2 < 1 - eps ) {
-					if ( lazy ) {
-						LazyConsI::add( constraint2 >= 1 );
-					}
-					else {
-						UserCutI::add( constraint2 >=1 );
-					}
-				}
-				constraint1.end();
-				constraint2.end();
-				break;
 			}
 		}
 		// free memory
@@ -148,7 +146,6 @@ void CutCallback::cycleEliminationCuts()
 
 		u_int n = digraph.n_nodes;
 		u_int m = digraph.n_edges;
-		vector<bool> edge_found( m );
 
 		IloNumArray xval( env, m );
 		IloNumArray zval( env, n );
@@ -163,11 +160,9 @@ void CutCallback::cycleEliminationCuts()
 		}
 
 		// initialize arc weights: 1 - x
-		// and set edge_found to false
 		for ( u_int i = 0; i < m; i++ ) {
 			arc_weights[i] = 1 - xval[i];
 			arc_weights[i+m] = 1 - xval[i];
-			edge_found[i] = false;
 		}
 
 		// we look for cycles, and before we shuffle the
@@ -180,11 +175,6 @@ void CutCallback::cycleEliminationCuts()
 		for ( vector<u_int>::iterator it1 = shuffled.begin();
 					it1 != shuffled.end(); ++it1 ) {
 			u_int i = *it1;
-			if (edge_found[i]) {
-				// we already found a cycle involving this edge
-				// so let's skip it
-				continue;
-			}
 			u_int v1 = digraph.edges[i].v1;
 			u_int v2 = digraph.edges[i].v2;
 			// exclude this edge by setting the weight to high number
@@ -209,12 +199,10 @@ void CutCallback::cycleEliminationCuts()
 						e -= m;
 					}
 					constraint += x[e];
-					edge_found[e] = true;
 					// cerr << e << " ";
 				}
 				// add node i
 				constraint += x[i];
-				edge_found[i] = true;
 				// cerr << i << "<=" << (spSize+1) << endl;
 				if ( lazy ) {
 					LazyConsI::add( constraint <= spSize );
