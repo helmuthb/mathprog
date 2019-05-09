@@ -81,6 +81,7 @@ private:
 	Digraph& digraph;
 	IloBoolVarArray& x;
 	IloBoolVarArray& z;
+	u_int k;
 
 	void separate();
 
@@ -116,7 +117,7 @@ private:
 
 public:
 
-	CutCallback( IloEnv& _env, string _cut_type, double _eps, Digraph& _digraph, IloBoolVarArray& _x, IloBoolVarArray& _z );
+	CutCallback( IloEnv& _env, string _cut_type, double _eps, Digraph& _digraph, IloBoolVarArray& _x, IloBoolVarArray& _z, u_int _k );
 	virtual ~CutCallback();
 
 	// entry for lazy constraint callback (called for integer solutions)

@@ -34,8 +34,8 @@ void kMST_ILP::solve( bool verbose )
 		// set cut- and lazy-constraint-callback for
 		// cycle-elimination cuts ("cec") or directed connection cuts ("dcc")
 		if (model_type == "cec" || model_type == "dcc") {
-			CutCallback* usercb = new CutCallback( env, model_type, epOpt, digraph, x, z );
-			CutCallback* lazycb = new CutCallback( env, model_type, epOpt, digraph, x, z );
+			CutCallback* usercb = new CutCallback( env, model_type, epOpt, digraph, x, z, k );
+			CutCallback* lazycb = new CutCallback( env, model_type, epOpt, digraph, x, z, k );
 			cplex.use( (UserCutI*) usercb );
 			cplex.use( (LazyConsI*) lazycb );
 		}

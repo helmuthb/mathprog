@@ -1,8 +1,9 @@
 #include "CutCallback.h"
+#include <strstream>
 
-CutCallback::CutCallback( IloEnv& _env, string _cut_type, double _eps, Digraph& _digraph, IloBoolVarArray& _x, IloBoolVarArray& _z ) :
-	LazyConsI( _env ), UserCutI( _env ), env( _env ), cut_type( _cut_type ), eps( _eps ), digraph( _digraph ), x( _x ), z( _z ),
-	arc_weights( 2 * digraph.n_edges )
+CutCallback::CutCallback( IloEnv& _env, string _cut_type, double _eps, Digraph& _digraph, IloBoolVarArray& _x, IloBoolVarArray& _z, u_int _k ) :
+	LazyConsI( _env ), UserCutI( _env ), env( _env ), cut_type( _cut_type ), eps( _eps ),
+	digraph( _digraph ), x( _x ), z( _z ), k( _k ), arc_weights( 2 * digraph.n_edges )
 {
 }
 
@@ -21,13 +22,15 @@ void CutCallback::separate()
  */
 void CutCallback::connectionCuts()
 {
+	if ( !lazy ) {
+		return;
+	}
 	try {
 
 		u_int n = digraph.n_nodes;
-		u_int m = digraph.n_edges;
 		u_int a = digraph.n_arcs;
 
-		IloNumArray xval( env, 2*m );
+		IloNumArray xval( env, a );
 		IloNumArray zval( env, n );
 
 		if( lazy ) {
@@ -46,7 +49,9 @@ void CutCallback::connectionCuts()
 		// initialize arc capacities with x
 		list<pair<u_int, u_int> > arcs;
 		for ( u_int i = 0; i < a; i++ ) {
-			capacity[i] = xval[i];
+			// we count capacity if the arc is used, 0 if not
+			capacity[i] = xval[i] > eps ? 1 : 0;
+			// capacity[i] = xval[i] + eps;
 			u_int v1 = digraph.arcs[i].v1;
 			u_int v2 = digraph.arcs[i].v2;
 			arcs.push_back(pair<u_int, u_int>( v1, v2 ));
@@ -78,33 +83,28 @@ void CutCallback::connectionCuts()
 				mflow.update( 0, i, capacity );
 			}
 			// get the minimal flow
-			double min_cut = mflow.min_cut( 2 - eps, cuts );
-			if ( min_cut < 2 - eps ) {
-				// count the nodes on both sides - it must be at least 2
-				// in each
-				u_int count1 = 0;
-				u_int count2 = 0;
-				for ( u_int j = 0; j < n; j++ ) {
-					count1 += (cuts[j] == 1) ? 1 : 0;
-					count2 += (cuts[j] == 2) ? 1 : 0;
+			double min_cut = mflow.min_cut( 2, cuts );
+			if ( min_cut < 2 ) {
+				// we found a cut which might violate the DCC constraint
+				// we have to count the number of nodes on the left side -
+				// they must less or equal than k
+				u_int count = 0;
+				for ( u_int i = 0; i < n; i++ ) {
+					if ( cuts[i] == 1 ) count++;
 				}
-				if ( count1 > 1 && count2 > 1 ) {
-					// we found a cut which violates the DCC constraint
-					// we sum up the cuts in both directions and add the
-					// one which violates the condition
+				if ( count <= k ) {
 					IloExpr constraint ( env );
-					double sum = 0.;
+					double sum = 0;
 					for ( u_int j = 0; j < a; j++ ) {
 						u_int v1 = digraph.arcs[j].v1;
 						u_int v2 = digraph.arcs[j].v2;
-						if ( cuts[v1] == 1 && cuts[v2] == 2 ) {
+						if ( cuts[v1] == 1 && cuts[v2] != 1 ) {
 							constraint += x[j];
-							sum += xval[j];
-							cerr << v1 << "->" << v2 << " ";
+							sum += xval[j] + eps;
 						}
 					}
-					if ( sum < 1 - eps ) {
-						cerr << "activated";
+					// is the sum really less than 1?
+					if ( sum < 1 ) {
 						if ( lazy ) {
 							LazyConsI::add( constraint >= 1 );
 						}
@@ -112,10 +112,9 @@ void CutCallback::connectionCuts()
 							UserCutI::add( constraint >=1 );
 						}
 					}
-					cerr << endl;
 					constraint.end();
-					if ( sum < 1 - eps ) {
-						break;
+					if ( sum < 1 ) {
+						// break;
 					}
 				}
 			}
@@ -125,7 +124,6 @@ void CutCallback::connectionCuts()
 		delete[] ( cuts );
 		xval.end();
 		zval.end();
-
 	}
 	catch( IloException& e ) {
 		cerr << "CutCallback: exception " << e.getMessage();
