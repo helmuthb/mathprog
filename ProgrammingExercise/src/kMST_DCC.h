@@ -12,7 +12,8 @@ protected:
   void outputVars();
 
 public:
-  kMST_DCC( Digraph& _digraph, int _k, bool quiet );
+  kMST_DCC( Digraph& _digraph, int _k, bool _quiet,
+            bool _cut_early, int _max_cuts );
 
 };
 
