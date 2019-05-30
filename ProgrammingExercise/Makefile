@@ -117,3 +117,6 @@ report.blb: report.aux
 
 report.pdf: report.blb
 	pdflatex report
+
+report2.pdf: report2.tex
+	pdflatex report2

@@ -1,0 +1,293 @@
+\documentclass[11pt, oneside, a4paper, fleqn]{article}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage[english]{babel}
+\geometry{a4paper,margin=30mm}
+\usepackage{graphicx}	
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{tikz}
+\usepackage{tkz-graph}
+\usepackage{listings}
+\usepackage{siunitx}
+\usepackage{arydshln}
+\usepackage{enumitem}
+\rhead{Helmuth Breitenfellner (08725866)}
+\chead{}
+\lhead{Mathematical Programming}
+\rfoot{Page \thepage{} of \pageref{LastPage}}
+\lfoot{Programming Exercise}
+\cfoot{}
+\pagestyle{fancy}
+\renewcommand{\footrulewidth}{0.4pt}
+\author{Helmuth Breitenfellner}
+\title{Mathematical Programming\\
+       Programming Exercise\\
+       Part 2: Exponentially-Sized Formulations}
+\date{}
+\sisetup{
+  round-mode          = places, % Rounds numbers
+  round-precision     = 2, % to 2 places
+}
+\allowdisplaybreaks
+\setlength\parindent{0pt}
+\begin{document}
+\maketitle
+\begin{abstract}
+This report describes the exponentially-sized
+formulations of the $k$-nodes Minimal Spanning Tree ($k$-MST).
+The formulations are based on \textit{Cycle Elimination Constraints}
+and \textit{Directed Cutset Constraints}.
+These formulations have then been implemented using \texttt{CPLEX}
+in C++.
+
+The implementation can be found on GitHub:\\
+\url{https://github.com/helmuthb/mathprog/tree/master/ProgrammingExercise}
+
+\end{abstract}
+
+\section*{Cycle Elimination Constraints (\emph{CEC})}
+
+The following variables are introduced:
+\begin{align*}
+  z_i \in\{0,1\} & \enskip ... \enskip \text{Node $i$ is selected}\\
+  x_{ij} \in\{0,1\} & \enskip ... \enskip\text{Edge $i,j$ is selected}\\
+  y_{ij} \in\{0,1\} & \enskip ... \enskip\text{Arc $i,j$ is taken
+             in the tree, going from $i$ to $j$}
+\end{align*}
+
+With this variables one can define the basic constraints for
+the \emph{Cycle Elimination Constraints} formulation of
+the $k$-MST as follows:
+\begin{align}
+  x_{ij} & \le z_i, \enspace x_{ij} \le z_j \\
+  y_{ij} + y_{ji} & = x_{ij}\\
+  \sum_{i,j}x_{ij} & = k \\
+  \sum_{j} z_j & = k + 1 \\
+  \sum_{i} y_{0i} & = 1
+\end{align}
+
+These are the basic constraints.
+
+Then, in both the \emph{lazy cut} and the \emph{user cut}
+situation, cycles in proposed solutions are identified
+and corresponding constraints are added to the model dynamically.
+
+For adding the constraints I used the following approach:
+\begin{itemize}
+\item Create a weighted directed graph, giving each arc the weight
+of 1 if the edge has \emph{not} been selected and a weight of 0
+if the edge has been selected (binarize the weights)
+\item shuffle the arcs of the graph
+\item loop through the arcs, and search for cycles which contain
+the specified arc, by using Dijkstra algorithm to find
+the shortest path complementing the arc
+\item stop when the first additional constraint is found
+\end{itemize}
+
+This approach was tested against alternatives:
+\begin{itemize}
+\item Do not binarize the weights
+\item Only add constraints as \emph{lazy cuts}
+\item Add more than one constraint
+\end{itemize}
+
+However, the presented approach was the fastest.
+
+\section*{Directed Cutset Constraints (\emph{DCC})}
+
+The following variables are introduced:
+\begin{align*}
+  z_i \in\{0,1\} & \enskip ... \enskip \text{Node $i$ is selected}\\
+  x_{ij} \in\{0,1\} & \enskip ... \enskip\text{Arc $i,j$ is taken
+             in the tree, going from $i$ to $j$}\\
+  x^0_{ij} \in\{0,1\} & \enskip ... \enskip\text{Edge $i,j$ is selected}
+\end{align*}
+
+\emph{
+Note that in contrast to the other implementations here the
+variable $x$ denotes the directed arcs, not the undirected edges.
+}
+
+With this variables one can define the basic constraints for
+the \emph{Directed Cutset Constraints} formulation of
+the $k$-MST as follows:
+
+\begin{align}
+  x^0_{ij} & \le z_i \\
+  x^0_{ij} & \le z_j \\
+  x_{ij} + x_{ji} & = x^0_{ij}\\
+  \sum_{i,j}x_{ij} & = k \\
+  \sum_{j} z_j & = k + 1 \\
+  \sum_{i} x_{0i} & = 1
+\end{align}
+
+These are the basic constraints.
+
+Then, in both the \emph{lazy cut} and the \emph{user cut}
+situation, using MaxFlow algorithm the minimal cuts are
+searched, and they are added to the model dynamically.
+
+For adding the cuts I used the following approach:
+\begin{itemize}
+\item Create a weighted directed graph, giving each arc
+the weight of 1 if the arc has been selected and a weight of 0
+if the arc has not been selected (binarized weights)
+\item shuffle the vertices of the graph
+\item loop through the vertices, and for each vertice
+search for minimal cuts between the root and the selected vertice,
+using the provided Max-Flow algorithm
+\item stop when the first additional constraint is found
+\end{itemize}
+
+This approach was tested against alternatives:
+\begin{itemize}
+\item Do not binarize the weights
+\item Only add constraints as \emph{lazy cuts}
+\item Add more than one constraint
+\end{itemize}
+
+However, the presented approach was the fastest.
+
+\section*{Implementation Details}
+
+The implementation used the framework provided in the lecture.
+
+Some adaptations include:
+\begin{itemize}
+\item Use subclasses of the \texttt{kMST\_ILP} class
+      for the algorithms
+\item Add runtime options whether cuts shall be added
+      earlier (\texttt{-c}) and whether multiple cuts
+      shall be added (\texttt{-n <number>})
+\item Quiet option for output of only minimal results (\texttt{-q})
+\item Allow output of results with a \texttt{-v} option
+\end{itemize}
+
+Other than that the framework was (hopefully) used as supposed.
+
+\section*{Output Table}
+
+Runtime of the algorithms was quite high, especially in
+cases with higher $k$.
+Only the first test cases could be executed, the larger
+graphs did not deliver results after more than 24 hours.
+
+The runtimes refer to the output from the program and indicate
+CPU time for the solver - the actual time was of course larger.
+
+For reference, the runtime of the MTZ-formulation is added.
+
+The system used for the evaluation has an Intel\textregistered{}
+Xeon\textregistered{} CPU E31245 @ 3.30 GHz with 32 GB RAM.
+
+\begin{tabular}{cr|r|rrr|SSS}
+\multicolumn{3}{c}{} &
+% file & $k$ & Objective & 
+  \multicolumn{3}{c}{BnB-Nodes} &
+  \multicolumn{3}{c}{CPU Time} \\
+file & $k$ & Objective & \emph{CEC} & \emph{DCC} & \emph{MTZ} & \emph{CEC} & \emph{DCC} & \emph{MTZ} \\
+\hline
+\texttt{g01.dat} &
+  2 &
+  46 &
+  0 & 0 & 0 &
+  0.01 &
+  0.01 &
+  0.02 \\
+\texttt{g01.dat} &
+  5 &
+  477 &
+  0 & 0 & 0 &
+  0.02 &
+  0.02 &
+  0.02 \\
+\hdashline
+\texttt{g02.dat} &
+  4 &
+  373 &
+  0 & 0 & 0 &
+  0.07 &
+  0.02 &
+  0.03 \\
+\texttt{g02.dat} &
+  10 &
+  1390 &
+  0 & 26 & 0 &
+  0.04 &
+  0.09 &
+  0.05 \\
+\hdashline
+\texttt{g03.dat} &
+  10 &
+  725 &
+  0 & 0 & 0 &
+  0.18 &
+  0.06 &
+  0.10 \\
+\texttt{g03.dat} &
+  25 &
+  3074 &
+  60 & 1151 & 807 &
+  11.53 &
+  8.03 &
+  0.56 \\
+\hdashline
+\texttt{g04.dat} &
+  14 &
+  909 &
+  0 & 9 & 3 &
+  3.63 &
+  0.44 &
+  0.17 \\
+\texttt{g04.dat} &
+  35 &
+  3292 &
+  0 & 1416 & 355 & 
+  1.24 &
+  15.68 &
+  0.43 \\
+\hdashline
+\texttt{g05.dat} &
+  20 &
+  1235 &
+  0 & 36 & 186 &
+  6.98 &
+  0.79 &
+  0.52 \\
+\texttt{g05.dat} &
+  50 &
+  4898 &
+  732 &   & 2390 &
+  650.47 &
+       &
+  3.63 \\
+\hdashline
+\end{tabular}
+
+All higher instances did not produce results even after hours
+with the exponentially-sized formulations.
+
+\section*{Interpretation}
+
+With the exponentially-size formulations the problem can no longer
+be handled.
+While the MTZ is capable to deal with the largest graphs in the test
+set, the formulations CEC and DCC just cannot produce results
+in a reasonable time frame.
+
+\subsection*{Branch-and-Bound Nodes}
+
+The number of Branch-and-Bound Nodes can be seen as a measurement
+of the strength of the Polyhedron of the LP-relaxation.
+The smaller the Polyhedron is, the higher the probability that
+no branch-and-bound is needed and that the best (LP) solution
+is already integer.
+
+In a test run it was visible that not adding the constraints for
+the LP-relaxation is increasing the number of BnB-nodes,
+consistent with this explanation.
+
+\end{document}  
